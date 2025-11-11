@@ -3,13 +3,5 @@
   "outputDirectory": "frontend/build",
   "devCommand": "cd frontend && yarn start",
   "installCommand": "cd frontend && yarn install",
-  "framework": "create-react-app",
-  "env": {
-    "REACT_APP_BACKEND_URL": "@react_app_backend_url"
-  },
-  "build": {
-    "env": {
-      "REACT_APP_BACKEND_URL": "@react_app_backend_url"
-    }
-  }
+  "framework": "create-react-app"
 }
