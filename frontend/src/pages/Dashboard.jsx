@@ -334,12 +334,48 @@ export default function Dashboard({ user, onLogout }) {
                         <td className="px-4 py-3 text-sm">{getConditionBadge(tool.condition)}</td>
                         <td className="px-4 py-3 text-sm text-slate-700">{tool.equipment_location}</td>
                         <td className="px-4 py-3 text-sm">
-                          <Button
-                            onClick={() => window.open(`/api/tools/${tool.id}/barcode`, '_blank')}
-                            className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white"
-                          >
-                            Download
-                          </Button>
+                          <div className="flex flex-col space-y-1">
+                            <Button
+                              onClick={() => handleDownloadBarcode(tool.id, tool.serial_no)}
+                              size="sm"
+                              variant="outline"
+                              data-testid={`barcode-btn-${index}`}
+                              className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 border-blue-200"
+                            >
+                              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                              </svg>
+                              Barcode
+                            </Button>
+                            {tool.calibration_certificate && (
+                              <Button
+                                onClick={() => handleDownloadCertificate(tool.id, tool.equipment_name)}
+                                size="sm"
+                                variant="outline"
+                                data-testid={`cert-btn-${index}`}
+                                className="text-xs text-green-600 hover:text-green-800 hover:bg-green-50 border-green-200"
+                              >
+                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                Certificate
+                              </Button>
+                            )}
+                            {tool.equipment_manual && (
+                              <Button
+                                onClick={() => handleDownloadManual(tool.id, tool.equipment_name)}
+                                size="sm"
+                                variant="outline"
+                                data-testid={`manual-btn-${index}`}
+                                className="text-xs text-purple-600 hover:text-purple-800 hover:bg-purple-50 border-purple-200"
+                              >
+                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                </svg>
+                                Manual
+                              </Button>
+                            )}
+                          </div>
                         </td>
                         {isAdmin && (
                           <td className="px-4 py-3 text-sm">
