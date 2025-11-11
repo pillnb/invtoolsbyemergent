@@ -1,4 +1,6 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status
+from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -6,10 +8,19 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List
+from typing import List, Optional
 import uuid
-from datetime import datetime, timezone
-
+from datetime import datetime, timezone, timedelta
+from passlib.context import CryptContext
+import jwt
+import io
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.units import inch
+from reportlab.pdfgen import canvas
+from reportlab.lib import colors
+from reportlab.platypus import Table, TableStyle
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -19,54 +30,547 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# Create the main app without a prefix
-app = FastAPI()
+# Security
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+security = HTTPBearer()
+SECRET_KEY = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
+ALGORITHM = "HS256"
 
-# Create a router with the /api prefix
+# Create the main app
+app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
-
-# Define Models
-class StatusCheck(BaseModel):
-    model_config = ConfigDict(extra="ignore")  # Ignore MongoDB's _id field
-    
+# Models
+class User(BaseModel):
+    model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    username: str
+    password_hash: str
+    role: str  # 'admin' or 'viewer'
+    full_name: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-class StatusCheckCreate(BaseModel):
-    client_name: str
+class UserLogin(BaseModel):
+    username: str
+    password: str
 
-# Add your routes to the router instead of directly to app
-@api_router.get("/")
-async def root():
-    return {"message": "Hello World"}
+class UserResponse(BaseModel):
+    id: str
+    username: str
+    role: str
+    full_name: str
 
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.model_dump()
-    status_obj = StatusCheck(**status_dict)
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    user: UserResponse
+
+class Tool(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    equipment_name: str
+    brand_type: str
+    serial_no: str
+    inventory_code: str
+    periodic_inspection_date: Optional[str] = None
+    calibration_date: Optional[str] = None
+    calibration_validity_months: int = 12  # Default 12 months
+    condition: str  # 'Good' or 'Damaged'
+    description: Optional[str] = None
+    equipment_location: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ToolCreate(BaseModel):
+    equipment_name: str
+    brand_type: str
+    serial_no: str
+    inventory_code: str
+    periodic_inspection_date: Optional[str] = None
+    calibration_date: Optional[str] = None
+    calibration_validity_months: int = 12
+    condition: str
+    description: Optional[str] = None
+    equipment_location: str
+
+class ToolResponse(BaseModel):
+    id: str
+    equipment_name: str
+    brand_type: str
+    serial_no: str
+    inventory_code: str
+    periodic_inspection_date: Optional[str]
+    calibration_date: Optional[str]
+    calibration_validity_months: int
+    calibration_expiry_date: Optional[str]
+    status: str  # 'Valid', 'Expired', 'Expiring Soon'
+    condition: str
+    description: Optional[str]
+    equipment_location: str
+
+class LoanEquipment(BaseModel):
+    equipment_name: str
+    serial_no: str
+    condition: str
+
+class Loan(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    borrower_name: str
+    loan_date: str
+    return_date: str
+    equipments: List[LoanEquipment]  # Max 5 items
+    project_name: str
+    wbs_project_no: str
+    project_location: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str
+
+class LoanCreate(BaseModel):
+    borrower_name: str
+    loan_date: str
+    return_date: str
+    equipments: List[LoanEquipment]
+    project_name: str
+    wbs_project_no: str
+    project_location: str
+
+class Calibration(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    device_name: str
+    serial_no: str
+    calibration_date: str
+    calibration_expiry_date: str
+    device_condition: str
+    calibration_agency: str
+    calibration_location: str
+    person_name: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str
+
+class CalibrationCreate(BaseModel):
+    device_name: str
+    serial_no: str
+    calibration_date: str
+    calibration_expiry_date: str
+    device_condition: str
+    calibration_agency: str
+    calibration_location: str
+    person_name: str
+
+# Helper functions
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+def create_access_token(data: dict) -> str:
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + timedelta(days=7)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token has expired")
+    except jwt.JWTError:
+        raise HTTPException(status_code=401, detail="Could not validate credentials")
     
-    # Convert to dict and serialize datetime to ISO string for MongoDB
-    doc = status_obj.model_dump()
-    doc['timestamp'] = doc['timestamp'].isoformat()
-    
-    _ = await db.status_checks.insert_one(doc)
-    return status_obj
+    user = await db.users.find_one({"username": username}, {"_id": 0})
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
 
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    # Exclude MongoDB's _id field from the query results
-    status_checks = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
-    
-    # Convert ISO string timestamps back to datetime objects
-    for check in status_checks:
-        if isinstance(check['timestamp'], str):
-            check['timestamp'] = datetime.fromisoformat(check['timestamp'])
-    
-    return status_checks
+async def get_admin_user(current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return current_user
 
-# Include the router in the main app
+def calculate_tool_status(calibration_date: Optional[str], validity_months: int):
+    if not calibration_date:
+        return "Unknown", None
+    
+    try:
+        cal_date = datetime.fromisoformat(calibration_date.replace('Z', '+00:00'))
+        expiry_date = cal_date + timedelta(days=validity_months * 30)
+        expiry_str = expiry_date.strftime('%Y-%m-%d')
+        
+        now = datetime.now(timezone.utc)
+        days_until_expiry = (expiry_date - now).days
+        
+        if days_until_expiry < 0:
+            return "Expired", expiry_str
+        elif days_until_expiry <= 90:  # 3 months
+            return "Expiring Soon", expiry_str
+        else:
+            return "Valid", expiry_str
+    except:
+        return "Unknown", None
+
+# Initialize default admin user
+@app.on_event("startup")
+async def startup_db():
+    # Create default admin if not exists
+    admin_exists = await db.users.find_one({"username": "admin"})
+    if not admin_exists:
+        admin = User(
+            username="admin",
+            password_hash=hash_password("admin123"),
+            role="admin",
+            full_name="System Administrator"
+        )
+        doc = admin.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        await db.users.insert_one(doc)
+        logger.info("Default admin user created: username=admin, password=admin123")
+
+# Auth endpoints
+@api_router.post("/auth/login", response_model=TokenResponse)
+async def login(user_login: UserLogin):
+    user = await db.users.find_one({"username": user_login.username}, {"_id": 0})
+    if not user or not verify_password(user_login.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    
+    access_token = create_access_token(data={"sub": user["username"]})
+    user_response = UserResponse(
+        id=user["id"],
+        username=user["username"],
+        role=user["role"],
+        full_name=user["full_name"]
+    )
+    return TokenResponse(access_token=access_token, token_type="bearer", user=user_response)
+
+@api_router.get("/auth/me", response_model=UserResponse)
+async def get_me(current_user: dict = Depends(get_current_user)):
+    return UserResponse(
+        id=current_user["id"],
+        username=current_user["username"],
+        role=current_user["role"],
+        full_name=current_user["full_name"]
+    )
+
+# Tool endpoints
+@api_router.get("/tools", response_model=List[ToolResponse])
+async def get_tools(current_user: dict = Depends(get_current_user)):
+    tools = await db.tools.find({}, {"_id": 0}).to_list(1000)
+    
+    response = []
+    for tool in tools:
+        status, expiry_date = calculate_tool_status(
+            tool.get('calibration_date'),
+            tool.get('calibration_validity_months', 12)
+        )
+        response.append(ToolResponse(
+            id=tool['id'],
+            equipment_name=tool['equipment_name'],
+            brand_type=tool['brand_type'],
+            serial_no=tool['serial_no'],
+            inventory_code=tool['inventory_code'],
+            periodic_inspection_date=tool.get('periodic_inspection_date'),
+            calibration_date=tool.get('calibration_date'),
+            calibration_validity_months=tool.get('calibration_validity_months', 12),
+            calibration_expiry_date=expiry_date,
+            status=status,
+            condition=tool['condition'],
+            description=tool.get('description'),
+            equipment_location=tool['equipment_location']
+        ))
+    
+    return response
+
+@api_router.post("/tools", response_model=ToolResponse)
+async def create_tool(tool_create: ToolCreate, current_user: dict = Depends(get_admin_user)):
+    tool = Tool(**tool_create.model_dump())
+    doc = tool.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    doc['updated_at'] = doc['updated_at'].isoformat()
+    
+    await db.tools.insert_one(doc)
+    
+    status, expiry_date = calculate_tool_status(
+        tool.calibration_date,
+        tool.calibration_validity_months
+    )
+    
+    return ToolResponse(
+        id=tool.id,
+        equipment_name=tool.equipment_name,
+        brand_type=tool.brand_type,
+        serial_no=tool.serial_no,
+        inventory_code=tool.inventory_code,
+        periodic_inspection_date=tool.periodic_inspection_date,
+        calibration_date=tool.calibration_date,
+        calibration_validity_months=tool.calibration_validity_months,
+        calibration_expiry_date=expiry_date,
+        status=status,
+        condition=tool.condition,
+        description=tool.description,
+        equipment_location=tool.equipment_location
+    )
+
+@api_router.put("/tools/{tool_id}", response_model=ToolResponse)
+async def update_tool(tool_id: str, tool_update: ToolCreate, current_user: dict = Depends(get_admin_user)):
+    existing_tool = await db.tools.find_one({"id": tool_id}, {"_id": 0})
+    if not existing_tool:
+        raise HTTPException(status_code=404, detail="Tool not found")
+    
+    update_data = tool_update.model_dump()
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.tools.update_one({"id": tool_id}, {"$set": update_data})
+    
+    status, expiry_date = calculate_tool_status(
+        update_data.get('calibration_date'),
+        update_data.get('calibration_validity_months', 12)
+    )
+    
+    return ToolResponse(
+        id=tool_id,
+        equipment_name=update_data['equipment_name'],
+        brand_type=update_data['brand_type'],
+        serial_no=update_data['serial_no'],
+        inventory_code=update_data['inventory_code'],
+        periodic_inspection_date=update_data.get('periodic_inspection_date'),
+        calibration_date=update_data.get('calibration_date'),
+        calibration_validity_months=update_data.get('calibration_validity_months', 12),
+        calibration_expiry_date=expiry_date,
+        status=status,
+        condition=update_data['condition'],
+        description=update_data.get('description'),
+        equipment_location=update_data['equipment_location']
+    )
+
+@api_router.delete("/tools/{tool_id}")
+async def delete_tool(tool_id: str, current_user: dict = Depends(get_admin_user)):
+    result = await db.tools.delete_one({"id": tool_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Tool not found")
+    return {"message": "Tool deleted successfully"}
+
+@api_router.get("/tools/export/excel")
+async def export_tools_excel(current_user: dict = Depends(get_current_user)):
+    tools = await db.tools.find({}, {"_id": 0}).to_list(1000)
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Tool Status"
+    
+    # Headers
+    headers = [
+        "No.", "Equipment Name", "Brand/Type", "Serial No.", "Inventory Code",
+        "Periodic Inspection Date", "Calibration Date", "Calibration Expiry Date",
+        "Status", "Condition", "Description", "Equipment Location"
+    ]
+    
+    # Style headers
+    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF")
+    thin_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_num, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = thin_border
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    # Data rows
+    for row_num, tool in enumerate(tools, 2):
+        status, expiry_date = calculate_tool_status(
+            tool.get('calibration_date'),
+            tool.get('calibration_validity_months', 12)
+        )
+        
+        row_data = [
+            row_num - 1,
+            tool['equipment_name'],
+            tool['brand_type'],
+            tool['serial_no'],
+            tool['inventory_code'],
+            tool.get('periodic_inspection_date', ''),
+            tool.get('calibration_date', ''),
+            expiry_date or '',
+            status,
+            tool['condition'],
+            tool.get('description', ''),
+            tool['equipment_location']
+        ]
+        
+        for col_num, value in enumerate(row_data, 1):
+            cell = ws.cell(row=row_num, column=col_num, value=value)
+            cell.border = thin_border
+            cell.alignment = Alignment(horizontal='left', vertical='center')
+    
+    # Adjust column widths
+    column_widths = [5, 25, 20, 15, 15, 20, 18, 20, 15, 12, 30, 20]
+    for col_num, width in enumerate(column_widths, 1):
+        ws.column_dimensions[ws.cell(row=1, column=col_num).column_letter].width = width
+    
+    # Save to bytes
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=tool_status.xlsx"}
+    )
+
+# Loan endpoints
+@api_router.get("/loans", response_model=List[Loan])
+async def get_loans(current_user: dict = Depends(get_current_user)):
+    loans = await db.loans.find({}, {"_id": 0}).to_list(1000)
+    return loans
+
+@api_router.post("/loans", response_model=Loan)
+async def create_loan(loan_create: LoanCreate, current_user: dict = Depends(get_admin_user)):
+    if len(loan_create.equipments) > 5:
+        raise HTTPException(status_code=400, detail="Maximum 5 equipments allowed per loan")
+    
+    loan = Loan(**loan_create.model_dump(), created_by=current_user["username"])
+    doc = loan.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    
+    await db.loans.insert_one(doc)
+    return loan
+
+@api_router.get("/loans/{loan_id}/pdf")
+async def get_loan_pdf(loan_id: str, current_user: dict = Depends(get_current_user)):
+    loan = await db.loans.find_one({"id": loan_id}, {"_id": 0})
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    
+    # Create PDF
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    # Title
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(50, height - 50, "EQUIPMENT LOAN FORM")
+    
+    # Form details
+    p.setFont("Helvetica", 10)
+    y = height - 100
+    
+    p.drawString(50, y, f"Borrower Name: {loan['borrower_name']}")
+    y -= 20
+    p.drawString(50, y, f"Loan Date: {loan['loan_date']}")
+    y -= 20
+    p.drawString(50, y, f"Return Date: {loan['return_date']}")
+    y -= 20
+    p.drawString(50, y, f"Project Name: {loan['project_name']}")
+    y -= 20
+    p.drawString(50, y, f"WBS Project No.: {loan['wbs_project_no']}")
+    y -= 20
+    p.drawString(50, y, f"Project Location: {loan['project_location']}")
+    y -= 30
+    
+    # Equipment table
+    p.setFont("Helvetica-Bold", 11)
+    p.drawString(50, y, "Equipment Details:")
+    y -= 20
+    
+    # Table headers
+    p.setFont("Helvetica-Bold", 9)
+    p.drawString(50, y, "No.")
+    p.drawString(100, y, "Equipment Name")
+    p.drawString(300, y, "Serial No.")
+    p.drawString(450, y, "Condition")
+    y -= 15
+    
+    # Equipment rows
+    p.setFont("Helvetica", 9)
+    for idx, eq in enumerate(loan['equipments'], 1):
+        p.drawString(50, y, str(idx))
+        p.drawString(100, y, eq['equipment_name'][:30])
+        p.drawString(300, y, eq['serial_no'])
+        p.drawString(450, y, eq['condition'])
+        y -= 15
+    
+    y -= 30
+    
+    # Signature section
+    p.setFont("Helvetica-Bold", 10)
+    p.drawString(50, y, "SIGNATURES")
+    y -= 30
+    
+    signatures = [
+        ("Borrower", 50),
+        ("Submitter", 180),
+        ("Approver", 310),
+        ("Coordinator", 440)
+    ]
+    
+    for sig_label, x_pos in signatures:
+        p.setFont("Helvetica", 9)
+        p.drawString(x_pos, y, sig_label + ":")
+        p.line(x_pos, y - 5, x_pos + 100, y - 5)
+        p.drawString(x_pos, y - 20, "Name:")
+        p.line(x_pos + 35, y - 25, x_pos + 100, y - 25)
+        p.drawString(x_pos, y - 35, "Date:")
+        p.line(x_pos + 30, y - 40, x_pos + 100, y - 40)
+    
+    y -= 80
+    p.setFont("Helvetica", 9)
+    p.drawString(50, y, "Senior Manager:")
+    p.line(150, y - 5, 300, y - 5)
+    p.drawString(50, y - 20, "Name:")
+    p.line(100, y - 25, 300, y - 25)
+    p.drawString(50, y - 35, "Date:")
+    p.line(100, y - 40, 300, y - 40)
+    
+    p.showPage()
+    p.save()
+    
+    buffer.seek(0)
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=loan_{loan_id}.pdf"}
+    )
+
+# Calibration endpoints
+@api_router.get("/calibrations", response_model=List[Calibration])
+async def get_calibrations(current_user: dict = Depends(get_current_user)):
+    calibrations = await db.calibrations.find({}, {"_id": 0}).to_list(1000)
+    return calibrations
+
+@api_router.post("/calibrations", response_model=Calibration)
+async def create_calibration(cal_create: CalibrationCreate, current_user: dict = Depends(get_admin_user)):
+    calibration = Calibration(**cal_create.model_dump(), created_by=current_user["username"])
+    doc = calibration.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    
+    await db.calibrations.insert_one(doc)
+    
+    # Update tool calibration if exists
+    await db.tools.update_one(
+        {"serial_no": cal_create.serial_no},
+        {"$set": {
+            "calibration_date": cal_create.calibration_date,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return calibration
+
+# Include router
 app.include_router(api_router)
 
 app.add_middleware(
