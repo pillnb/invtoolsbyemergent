@@ -468,7 +468,6 @@ export default function ToolsPage({ user }) {
             )}
           </CardContent>
         </Card>
-      </main>
 
       {/* Dialogs */}
       <ToolDialog
