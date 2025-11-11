@@ -13,6 +13,7 @@ export default function StockManagementPage({ user }) {
   const [stockItems, setStockItems] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [itemNameFilter, setItemNameFilter] = useState('All');
   const [loading, setLoading] = useState(true);
   const [stockDialogOpen, setStockDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -24,13 +25,21 @@ export default function StockManagementPage({ user }) {
     fetchStockItems();
   }, []);
 
+  // Get unique item names for filter dropdown
+  const uniqueItemNames = ['All', ...new Set(stockItems.map(item => item.item_name))];
+
   useEffect(() => {
-    const filtered = stockItems.filter(item => 
-      item.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.brand_specifications.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filtered = stockItems.filter(item => {
+      const matchesSearch = 
+        item.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.brand_specifications.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesItemName = itemNameFilter === 'All' || item.item_name === itemNameFilter;
+      
+      return matchesSearch && matchesItemName;
+    });
     setFilteredItems(filtered);
-  }, [searchTerm, stockItems]);
+  }, [searchTerm, itemNameFilter, stockItems]);
 
   const fetchStockItems = async () => {
     try {
