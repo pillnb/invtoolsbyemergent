@@ -7,6 +7,7 @@ import DashboardLayout from "./components/DashboardLayout";
 import DashboardHome from "./pages/DashboardHome";
 import ToolsPage from "./pages/ToolsPage";
 import StockManagementPage from "./pages/StockManagementPage";
+import AnalysisPage from "./pages/AnalysisPage";
 import { Toaster } from "./components/ui/sonner";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
