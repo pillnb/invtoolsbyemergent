@@ -333,6 +333,14 @@ export default function Dashboard({ user, onLogout }) {
                         <td className="px-4 py-3 text-sm">{getStatusBadge(tool.status)}</td>
                         <td className="px-4 py-3 text-sm">{getConditionBadge(tool.condition)}</td>
                         <td className="px-4 py-3 text-sm text-slate-700">{tool.equipment_location}</td>
+                        <td className="px-4 py-3 text-sm">
+                          <Button
+                            onClick={() => window.open(`/api/tools/${tool.id}/barcode`, '_blank')}
+                            className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white"
+                          >
+                            Download
+                          </Button>
+                        </td>
                         {isAdmin && (
                           <td className="px-4 py-3 text-sm">
                             <div className="flex space-x-2">
