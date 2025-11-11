@@ -314,6 +314,7 @@ export default function Dashboard({ user, onLogout }) {
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Status</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Condition</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Location</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Documents</th>
                       {isAdmin && (
                         <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Actions</th>
                       )}
