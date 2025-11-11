@@ -68,12 +68,7 @@ function App() {
           </div>
         );
       case 'analysis':
-        return (
-          <div className="p-8">
-            <h1 className="text-3xl font-bold text-slate-800">Analysis</h1>
-            <p className="text-slate-600 mt-4">Analysis features coming soon...</p>
-          </div>
-        );
+        return <AnalysisPage user={user} />;
       default:
         return <DashboardHome user={user} />;
     }
