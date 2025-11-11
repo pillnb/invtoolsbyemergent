@@ -69,9 +69,12 @@ export default function CalibrationDialog({ open, onOpenChange, tools, onSuccess
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="calibration-dialog">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="calibration-dialog" aria-describedby="calibration-dialog-description">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-slate-800">Calibration Form</DialogTitle>
+          <p id="calibration-dialog-description" className="sr-only">
+            Create a new calibration record for equipment maintenance tracking
+          </p>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="grid grid-cols-2 gap-4">
