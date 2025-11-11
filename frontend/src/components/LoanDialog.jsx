@@ -226,7 +226,7 @@ export default function LoanDialog({ open, onOpenChange, tools }) {
                       <SelectTrigger data-testid={`equipment-select-${index}`}>
                         <SelectValue placeholder="Select equipment" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[100]" position="popper">
                         {tools.map((tool) => (
                           <SelectItem key={tool.id} value={tool.equipment_name}>
                             {tool.equipment_name}
