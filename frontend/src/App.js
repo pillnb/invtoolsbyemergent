@@ -58,12 +58,7 @@ function App() {
       case 'tools':
         return <ToolsPage user={user} />;
       case 'stock':
-        return (
-          <div className="p-8">
-            <h1 className="text-3xl font-bold text-slate-800">Stock Management</h1>
-            <p className="text-slate-600 mt-4">Stock management features coming soon...</p>
-          </div>
-        );
+        return <StockManagementPage user={user} />;
       case 'forms':
         return (
           <div className="p-8">
