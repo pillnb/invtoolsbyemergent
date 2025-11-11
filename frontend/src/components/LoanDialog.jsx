@@ -108,9 +108,12 @@ export default function LoanDialog({ open, onOpenChange, tools }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="loan-dialog">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="loan-dialog" aria-describedby="loan-dialog-description">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-slate-800">Equipment Loan Form</DialogTitle>
+          <p id="loan-dialog-description" className="sr-only">
+            Create a new equipment loan record with borrower information and equipment details
+          </p>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="grid grid-cols-2 gap-4">
