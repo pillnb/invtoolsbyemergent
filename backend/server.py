@@ -375,10 +375,160 @@ async def update_tool(tool_id: str, tool_update: ToolCreate, current_user: dict 
 
 @api_router.delete("/tools/{tool_id}")
 async def delete_tool(tool_id: str, current_user: dict = Depends(get_admin_user)):
+    tool = await db.tools.find_one({"id": tool_id}, {"_id": 0})
+    if tool:
+        # Delete associated files
+        if tool.get('calibration_certificate'):
+            cert_path = ROOT_DIR / tool['calibration_certificate']
+            if cert_path.exists():
+                cert_path.unlink()
+        if tool.get('equipment_manual'):
+            manual_path = ROOT_DIR / tool['equipment_manual']
+            if manual_path.exists():
+                manual_path.unlink()
+    
     result = await db.tools.delete_one({"id": tool_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Tool not found")
     return {"message": "Tool deleted successfully"}
+
+@api_router.post("/tools/{tool_id}/upload-certificate")
+async def upload_certificate(
+    tool_id: str,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_admin_user)
+):
+    tool = await db.tools.find_one({"id": tool_id}, {"_id": 0})
+    if not tool:
+        raise HTTPException(status_code=404, detail="Tool not found")
+    
+    # Save file
+    file_extension = Path(file.filename).suffix
+    filename = f"{tool_id}_certificate{file_extension}"
+    file_path = CERTIFICATES_DIR / filename
+    
+    with file_path.open("wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    # Update database
+    relative_path = f"uploads/certificates/{filename}"
+    await db.tools.update_one(
+        {"id": tool_id},
+        {"$set": {"calibration_certificate": relative_path, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"message": "Certificate uploaded successfully", "file_path": relative_path}
+
+@api_router.post("/tools/{tool_id}/upload-manual")
+async def upload_manual(
+    tool_id: str,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_admin_user)
+):
+    tool = await db.tools.find_one({"id": tool_id}, {"_id": 0})
+    if not tool:
+        raise HTTPException(status_code=404, detail="Tool not found")
+    
+    # Save file
+    file_extension = Path(file.filename).suffix
+    filename = f"{tool_id}_manual{file_extension}"
+    file_path = MANUALS_DIR / filename
+    
+    with file_path.open("wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    # Update database
+    relative_path = f"uploads/manuals/{filename}"
+    await db.tools.update_one(
+        {"id": tool_id},
+        {"$set": {"equipment_manual": relative_path, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"message": "Manual uploaded successfully", "file_path": relative_path}
+
+@api_router.get("/tools/{tool_id}/download-certificate")
+async def download_certificate(tool_id: str, current_user: dict = Depends(get_current_user)):
+    tool = await db.tools.find_one({"id": tool_id}, {"_id": 0})
+    if not tool or not tool.get('calibration_certificate'):
+        raise HTTPException(status_code=404, detail="Certificate not found")
+    
+    file_path = ROOT_DIR / tool['calibration_certificate']
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    return FileResponse(file_path, filename=f"{tool['equipment_name']}_certificate{file_path.suffix}")
+
+@api_router.get("/tools/{tool_id}/download-manual")
+async def download_manual(tool_id: str, current_user: dict = Depends(get_current_user)):
+    tool = await db.tools.find_one({"id": tool_id}, {"_id": 0})
+    if not tool or not tool.get('equipment_manual'):
+        raise HTTPException(status_code=404, detail="Manual not found")
+    
+    file_path = ROOT_DIR / tool['equipment_manual']
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    return FileResponse(file_path, filename=f"{tool['equipment_name']}_manual{file_path.suffix}")
+
+@api_router.get("/tools/{tool_id}/barcode")
+async def generate_barcode(tool_id: str, current_user: dict = Depends(get_current_user)):
+    tool = await db.tools.find_one({"id": tool_id}, {"_id": 0})
+    if not tool:
+        raise HTTPException(status_code=404, detail="Tool not found")
+    
+    # Calculate status
+    status, expiry_date = calculate_tool_status(
+        tool.get('calibration_date'),
+        tool.get('calibration_validity_months', 12)
+    )
+    
+    # Create barcode image with information
+    img_width, img_height = 800, 500
+    img = Image.new('RGB', (img_width, img_height), 'white')
+    draw = ImageDraw.Draw(img)
+    
+    # Generate Code128 barcode for serial number
+    CODE128 = barcode.get_barcode_class('code128')
+    barcode_obj = CODE128(tool['serial_no'], writer=ImageWriter())
+    barcode_buffer = io.BytesIO()
+    barcode_obj.write(barcode_buffer, options={'write_text': False})
+    barcode_buffer.seek(0)
+    barcode_img = Image.open(barcode_buffer)
+    
+    # Resize barcode
+    barcode_img = barcode_img.resize((600, 150))
+    img.paste(barcode_img, (100, 50))
+    
+    # Add text information
+    try:
+        font_large = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 24)
+        font_medium = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 18)
+        font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 14)
+    except:
+        font_large = ImageFont.load_default()
+        font_medium = ImageFont.load_default()
+        font_small = ImageFont.load_default()
+    
+    # Draw text
+    y_pos = 220
+    draw.text((50, y_pos), f"Equipment: {tool['equipment_name']}", fill='black', font=font_medium)
+    y_pos += 40
+    draw.text((50, y_pos), f"Serial No: {tool['serial_no']}", fill='black', font=font_medium)
+    y_pos += 40
+    draw.text((50, y_pos), f"Calibration Expiry: {expiry_date or 'N/A'}", fill='red' if status == 'Expired' else 'black', font=font_medium)
+    y_pos += 40
+    draw.text((50, y_pos), f"Status: {status}", fill='red' if status == 'Expired' else 'green', font=font_medium)
+    y_pos += 50
+    draw.text((50, y_pos), "Owner: PT Biro Klasifikasi Indonesia", fill='blue', font=font_large)
+    
+    # Save to buffer
+    buffer = io.BytesIO()
+    img.save(buffer, format='PNG')
+    buffer.seek(0)
+    
+    return StreamingResponse(buffer, media_type="image/png", headers={
+        "Content-Disposition": f"attachment; filename=barcode_{tool['serial_no']}.png"
+    })
 
 @api_router.get("/tools/export/excel")
 async def export_tools_excel(current_user: dict = Depends(get_current_user)):
