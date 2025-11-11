@@ -175,6 +175,33 @@ class CalibrationCreate(BaseModel):
     calibration_location: str
     person_name: str
 
+# Stock Management Models
+class StockItem(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    item_name: str
+    brand_specifications: str
+    available_quantity: int
+    unit: str
+    description: Optional[str] = None
+    purchase_receipt: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class StockItemCreate(BaseModel):
+    item_name: str
+    brand_specifications: str
+    available_quantity: int
+    unit: str
+    description: Optional[str] = None
+
+class StockItemUpdate(BaseModel):
+    item_name: Optional[str] = None
+    brand_specifications: Optional[str] = None
+    available_quantity: Optional[int] = None
+    unit: Optional[str] = None
+    description: Optional[str] = None
+
 # Helper functions
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
