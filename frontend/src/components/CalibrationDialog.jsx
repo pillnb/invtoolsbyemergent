@@ -87,7 +87,7 @@ export default function CalibrationDialog({ open, onOpenChange, tools, onSuccess
                 <SelectTrigger data-testid="device-name-select">
                   <SelectValue placeholder="Select device" />
                 </SelectTrigger>
-                <SelectContent className="z-[100]" position="popper">
+                <SelectContent className="z-[100]" position="popper" sideOffset={5}>
                   {tools.map((tool) => (
                     <SelectItem key={tool.id} value={tool.equipment_name}>
                       {tool.equipment_name}
