@@ -910,6 +910,157 @@ async def download_receipt(item_id: str, current_user: dict = Depends(get_curren
     
     return FileResponse(file_path, filename=f"{item['item_name']}_receipt{file_path.suffix}")
 
+# Analysis endpoints
+@api_router.get("/analysis/tools-usage")
+async def get_tools_usage_analysis(current_user: dict = Depends(get_current_user)):
+    """Analyze which tools are frequently used based on loan records"""
+    loans = await db.loans.find({}, {"_id": 0}).to_list(1000)
+    
+    tool_usage = {}
+    for loan in loans:
+        for equipment in loan.get('equipments', []):
+            name = equipment['equipment_name']
+            if name in tool_usage:
+                tool_usage[name] += 1
+            else:
+                tool_usage[name] = 1
+    
+    # Sort by frequency
+    sorted_usage = sorted(tool_usage.items(), key=lambda x: x[1], reverse=True)
+    return [{"equipment_name": name, "usage_count": count} for name, count in sorted_usage[:10]]
+
+@api_router.get("/analysis/tools-damaged")
+async def get_tools_damaged_analysis(current_user: dict = Depends(get_current_user)):
+    """Analyze damaged tools by type and brand"""
+    tools = await db.tools.find({"condition": "Damaged"}, {"_id": 0}).to_list(1000)
+    
+    by_type = {}
+    by_brand = {}
+    
+    for tool in tools:
+        # Count by equipment name (type)
+        name = tool['equipment_name']
+        if name in by_type:
+            by_type[name] += 1
+        else:
+            by_type[name] = 1
+        
+        # Count by brand
+        brand = tool['brand_type']
+        if brand in by_brand:
+            by_brand[brand] += 1
+        else:
+            by_brand[brand] = 1
+    
+    return {
+        "by_type": [{"type": k, "count": v} for k, v in sorted(by_type.items(), key=lambda x: x[1], reverse=True)],
+        "by_brand": [{"brand": k, "count": v} for k, v in sorted(by_brand.items(), key=lambda x: x[1], reverse=True)],
+        "total_damaged": len(tools)
+    }
+
+@api_router.get("/analysis/tools-lost")
+async def get_tools_lost_analysis(current_user: dict = Depends(get_current_user)):
+    """Analyze lost tools - tools with status Unknown or never returned from loans"""
+    # For now, we'll identify potentially lost tools as those with Unknown status
+    tools = await db.tools.find({}, {"_id": 0}).to_list(1000)
+    
+    lost_candidates = []
+    for tool in tools:
+        status, _ = calculate_tool_status(
+            tool.get('calibration_date'),
+            tool.get('calibration_validity_months', 12)
+        )
+        if status == "Unknown":
+            lost_candidates.append({
+                "equipment_name": tool['equipment_name'],
+                "serial_no": tool['serial_no'],
+                "brand_type": tool['brand_type'],
+                "location": tool['equipment_location']
+            })
+    
+    return {
+        "potential_lost": lost_candidates,
+        "total": len(lost_candidates)
+    }
+
+@api_router.get("/analysis/stock-requested")
+async def get_stock_requested_analysis(current_user: dict = Depends(get_current_user)):
+    """Analyze frequently requested stock items based on low quantities"""
+    stock_items = await db.stock_items.find({}, {"_id": 0}).to_list(1000)
+    
+    # Items with low stock are frequently requested
+    low_stock_items = [
+        {
+            "item_name": item['item_name'],
+            "brand_specifications": item['brand_specifications'],
+            "available_quantity": item['available_quantity'],
+            "unit": item['unit']
+        }
+        for item in stock_items
+        if item['available_quantity'] < 50
+    ]
+    
+    # Sort by lowest quantity (most requested)
+    low_stock_items.sort(key=lambda x: x['available_quantity'])
+    
+    return {
+        "frequently_requested": low_stock_items,
+        "total_low_stock": len(low_stock_items)
+    }
+
+@api_router.get("/analysis/stock-purchased")
+async def get_stock_purchased_analysis(current_user: dict = Depends(get_current_user)):
+    """Analyze frequently purchased items by brand and name"""
+    stock_items = await db.stock_items.find({}, {"_id": 0}).to_list(1000)
+    
+    by_brand = {}
+    by_item = {}
+    
+    for item in stock_items:
+        # Count by brand
+        brand = item['brand_specifications']
+        if brand in by_brand:
+            by_brand[brand] += 1
+        else:
+            by_brand[brand] = 1
+        
+        # Count by item name
+        name = item['item_name']
+        if name in by_item:
+            by_item[name] += 1
+        else:
+            by_item[name] = 1
+    
+    return {
+        "by_brand": [{"brand": k, "count": v} for k, v in sorted(by_brand.items(), key=lambda x: x[1], reverse=True)[:10]],
+        "by_item": [{"item_name": k, "count": v} for k, v in sorted(by_item.items(), key=lambda x: x[1], reverse=True)[:10]],
+        "total_items": len(stock_items)
+    }
+
+@api_router.get("/analysis/summary")
+async def get_analysis_summary(current_user: dict = Depends(get_current_user)):
+    """Get overall summary statistics for analysis dashboard"""
+    tools = await db.tools.find({}, {"_id": 0}).to_list(1000)
+    loans = await db.loans.find({}, {"_id": 0}).to_list(1000)
+    stock_items = await db.stock_items.find({}, {"_id": 0}).to_list(1000)
+    
+    # Calculate statistics
+    damaged_tools = len([t for t in tools if t['condition'] == 'Damaged'])
+    good_tools = len([t for t in tools if t['condition'] == 'Good'])
+    total_loans = len(loans)
+    low_stock = len([s for s in stock_items if s['available_quantity'] < 50])
+    
+    return {
+        "total_tools": len(tools),
+        "damaged_tools": damaged_tools,
+        "good_tools": good_tools,
+        "damage_rate": round((damaged_tools / len(tools) * 100) if len(tools) > 0 else 0, 1),
+        "total_loans": total_loans,
+        "total_stock_items": len(stock_items),
+        "low_stock_items": low_stock,
+        "low_stock_rate": round((low_stock / len(stock_items) * 100) if len(stock_items) > 0 else 0, 1)
+    }
+
 # Include router
 app.include_router(api_router)
 
