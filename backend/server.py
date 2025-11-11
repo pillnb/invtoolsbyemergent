@@ -34,8 +34,10 @@ load_dotenv(ROOT_DIR / '.env')
 UPLOAD_DIR = ROOT_DIR / 'uploads'
 CERTIFICATES_DIR = UPLOAD_DIR / 'certificates'
 MANUALS_DIR = UPLOAD_DIR / 'manuals'
+RECEIPTS_DIR = UPLOAD_DIR / 'receipts'
 CERTIFICATES_DIR.mkdir(parents=True, exist_ok=True)
 MANUALS_DIR.mkdir(parents=True, exist_ok=True)
+RECEIPTS_DIR.mkdir(parents=True, exist_ok=True)
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
