@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File, Form
 from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
@@ -14,6 +14,7 @@ from datetime import datetime, timezone, timedelta
 from passlib.context import CryptContext
 import jwt
 import io
+import shutil
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 from reportlab.lib.pagesizes import letter, A4
@@ -21,6 +22,10 @@ from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.platypus import Table, TableStyle
+import barcode
+from barcode.writer import ImageWriter
+import qrcode
+from PIL import Image, ImageDraw, ImageFont
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
