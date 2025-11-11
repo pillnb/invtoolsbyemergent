@@ -482,44 +482,89 @@ async def generate_barcode(tool_id: str, current_user: dict = Depends(get_curren
         tool.get('calibration_validity_months', 12)
     )
     
-    # Create barcode image with information
-    img_width, img_height = 800, 500
+    # Create QR code data
+    qr_data = f"""Equipment Information:
+Device Name: {tool['equipment_name']}
+Serial Number: {tool['serial_no']}
+Owner: PT Biro Klasifikasi Indonesia
+Calibration Expiry: {expiry_date or 'N/A'}
+Status: {status}"""
+    
+    # Generate QR code
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_H,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(qr_data)
+    qr.make(fit=True)
+    
+    # Create QR code image
+    qr_img = qr.make_image(fill_color="black", back_color="white")
+    
+    # Create final image with QR code and text
+    img_width, img_height = 800, 650
     img = Image.new('RGB', (img_width, img_height), 'white')
     draw = ImageDraw.Draw(img)
     
-    # Generate Code128 barcode for serial number
-    CODE128 = barcode.get_barcode_class('code128')
-    barcode_obj = CODE128(tool['serial_no'], writer=ImageWriter())
-    barcode_buffer = io.BytesIO()
-    barcode_obj.write(barcode_buffer, options={'write_text': False})
-    barcode_buffer.seek(0)
-    barcode_img = Image.open(barcode_buffer)
+    # Resize and center QR code
+    qr_img = qr_img.resize((350, 350))
+    qr_position = ((img_width - 350) // 2, 50)
+    img.paste(qr_img, qr_position)
     
-    # Resize barcode
-    barcode_img = barcode_img.resize((600, 150))
-    img.paste(barcode_img, (100, 50))
-    
-    # Add text information
+    # Add text information below QR code
     try:
-        font_large = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 24)
-        font_medium = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 18)
+        font_large = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 22)
+        font_medium = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 16)
         font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 14)
     except:
         font_large = ImageFont.load_default()
         font_medium = ImageFont.load_default()
         font_small = ImageFont.load_default()
     
-    # Draw text
-    y_pos = 220
-    draw.text((50, y_pos), f"Equipment: {tool['equipment_name']}", fill='black', font=font_medium)
+    # Draw text information
+    y_pos = 420
+    
+    # Equipment name (centered)
+    text = f"{tool['equipment_name']}"
+    bbox = draw.textbbox((0, 0), text, font=font_large)
+    text_width = bbox[2] - bbox[0]
+    x_centered = (img_width - text_width) // 2
+    draw.text((x_centered, y_pos), text, fill='black', font=font_large)
     y_pos += 40
-    draw.text((50, y_pos), f"Serial No: {tool['serial_no']}", fill='black', font=font_medium)
-    y_pos += 40
-    draw.text((50, y_pos), f"Calibration Expiry: {expiry_date or 'N/A'}", fill='red' if status == 'Expired' else 'black', font=font_medium)
-    y_pos += 40
-    draw.text((50, y_pos), f"Status: {status}", fill='red' if status == 'Expired' else 'green', font=font_medium)
-    y_pos += 50
-    draw.text((50, y_pos), "Owner: PT Biro Klasifikasi Indonesia", fill='blue', font=font_large)
+    
+    # Serial number
+    text = f"Serial No: {tool['serial_no']}"
+    bbox = draw.textbbox((0, 0), text, font=font_medium)
+    text_width = bbox[2] - bbox[0]
+    x_centered = (img_width - text_width) // 2
+    draw.text((x_centered, y_pos), text, fill='black', font=font_medium)
+    y_pos += 35
+    
+    # Expiry date
+    expiry_color = 'red' if status == 'Expired' else 'green' if status == 'Valid' else 'orange'
+    text = f"Expiry: {expiry_date or 'N/A'}"
+    bbox = draw.textbbox((0, 0), text, font=font_medium)
+    text_width = bbox[2] - bbox[0]
+    x_centered = (img_width - text_width) // 2
+    draw.text((x_centered, y_pos), text, fill=expiry_color, font=font_medium)
+    y_pos += 35
+    
+    # Status
+    text = f"Status: {status}"
+    bbox = draw.textbbox((0, 0), text, font=font_medium)
+    text_width = bbox[2] - bbox[0]
+    x_centered = (img_width - text_width) // 2
+    draw.text((x_centered, y_pos), text, fill=expiry_color, font=font_medium)
+    y_pos += 45
+    
+    # Owner (centered, blue)
+    text = "PT Biro Klasifikasi Indonesia"
+    bbox = draw.textbbox((0, 0), text, font=font_large)
+    text_width = bbox[2] - bbox[0]
+    x_centered = (img_width - text_width) // 2
+    draw.text((x_centered, y_pos), text, fill='blue', font=font_large)
     
     # Save to buffer
     buffer = io.BytesIO()
@@ -527,7 +572,7 @@ async def generate_barcode(tool_id: str, current_user: dict = Depends(get_curren
     buffer.seek(0)
     
     return StreamingResponse(buffer, media_type="image/png", headers={
-        "Content-Disposition": f"attachment; filename=barcode_{tool['serial_no']}.png"
+        "Content-Disposition": f"attachment; filename=qrcode_{tool['serial_no']}.png"
     })
 
 @api_router.get("/tools/export/excel")
