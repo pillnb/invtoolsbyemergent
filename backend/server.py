@@ -200,7 +200,13 @@ def calculate_tool_status(calibration_date: Optional[str], validity_months: int)
         return "Unknown", None
     
     try:
-        cal_date = datetime.fromisoformat(calibration_date.replace('Z', '+00:00'))
+        # Parse calibration date (handle both with and without timezone)
+        if 'T' in calibration_date or '+' in calibration_date or 'Z' in calibration_date:
+            cal_date = datetime.fromisoformat(calibration_date.replace('Z', '+00:00'))
+        else:
+            # Date only string - treat as UTC
+            cal_date = datetime.fromisoformat(calibration_date).replace(tzinfo=timezone.utc)
+        
         expiry_date = cal_date + timedelta(days=validity_months * 30)
         expiry_str = expiry_date.strftime('%Y-%m-%d')
         
@@ -213,7 +219,7 @@ def calculate_tool_status(calibration_date: Optional[str], validity_months: int)
             return "Expiring Soon", expiry_str
         else:
             return "Valid", expiry_str
-    except:
+    except Exception as e:
         return "Unknown", None
 
 # Initialize default admin user
