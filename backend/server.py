@@ -818,6 +818,98 @@ async def create_calibration(cal_create: CalibrationCreate, current_user: dict =
     
     return calibration
 
+# Stock Management endpoints
+@api_router.get("/stock", response_model=List[StockItem])
+async def get_stock_items(current_user: dict = Depends(get_current_user)):
+    items = await db.stock_items.find({}, {"_id": 0}).to_list(1000)
+    return items
+
+@api_router.post("/stock", response_model=StockItem)
+async def create_stock_item(item_create: StockItemCreate, current_user: dict = Depends(get_admin_user)):
+    item = StockItem(**item_create.model_dump())
+    doc = item.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    doc['updated_at'] = doc['updated_at'].isoformat()
+    
+    await db.stock_items.insert_one(doc)
+    return item
+
+@api_router.put("/stock/{item_id}", response_model=StockItem)
+async def update_stock_item(
+    item_id: str, 
+    item_update: StockItemUpdate, 
+    current_user: dict = Depends(get_admin_user)
+):
+    existing_item = await db.stock_items.find_one({"id": item_id}, {"_id": 0})
+    if not existing_item:
+        raise HTTPException(status_code=404, detail="Stock item not found")
+    
+    # If quantity is being updated, add to existing quantity (stock addition)
+    update_data = item_update.model_dump(exclude_unset=True)
+    if 'available_quantity' in update_data:
+        update_data['available_quantity'] = existing_item['available_quantity'] + update_data['available_quantity']
+    
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.stock_items.update_one({"id": item_id}, {"$set": update_data})
+    
+    updated_item = await db.stock_items.find_one({"id": item_id}, {"_id": 0})
+    return StockItem(**updated_item)
+
+@api_router.delete("/stock/{item_id}")
+async def delete_stock_item(item_id: str, current_user: dict = Depends(get_admin_user)):
+    item = await db.stock_items.find_one({"id": item_id}, {"_id": 0})
+    if item:
+        # Delete associated receipt file
+        if item.get('purchase_receipt'):
+            receipt_path = ROOT_DIR / item['purchase_receipt']
+            if receipt_path.exists():
+                receipt_path.unlink()
+    
+    result = await db.stock_items.delete_one({"id": item_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Stock item not found")
+    return {"message": "Stock item deleted successfully"}
+
+@api_router.post("/stock/{item_id}/upload-receipt")
+async def upload_receipt(
+    item_id: str,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_admin_user)
+):
+    item = await db.stock_items.find_one({"id": item_id}, {"_id": 0})
+    if not item:
+        raise HTTPException(status_code=404, detail="Stock item not found")
+    
+    # Save file
+    file_extension = Path(file.filename).suffix
+    filename = f"{item_id}_receipt{file_extension}"
+    file_path = RECEIPTS_DIR / filename
+    
+    with file_path.open("wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    # Update database
+    relative_path = f"uploads/receipts/{filename}"
+    await db.stock_items.update_one(
+        {"id": item_id},
+        {"$set": {"purchase_receipt": relative_path, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"message": "Receipt uploaded successfully", "file_path": relative_path}
+
+@api_router.get("/stock/{item_id}/download-receipt")
+async def download_receipt(item_id: str, current_user: dict = Depends(get_current_user)):
+    item = await db.stock_items.find_one({"id": item_id}, {"_id": 0})
+    if not item or not item.get('purchase_receipt'):
+        raise HTTPException(status_code=404, detail="Receipt not found")
+    
+    file_path = ROOT_DIR / item['purchase_receipt']
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    return FileResponse(file_path, filename=f"{item['item_name']}_receipt{file_path.suffix}")
+
 # Include router
 app.include_router(api_router)
 
