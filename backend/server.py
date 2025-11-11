@@ -121,6 +121,8 @@ class ToolResponse(BaseModel):
     condition: str
     description: Optional[str]
     equipment_location: str
+    calibration_certificate: Optional[str]
+    equipment_manual: Optional[str]
 
 class LoanEquipment(BaseModel):
     equipment_name: str
