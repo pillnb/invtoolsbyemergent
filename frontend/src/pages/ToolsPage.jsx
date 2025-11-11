@@ -291,6 +291,23 @@ export default function ToolsPage({ user }) {
                 </div>
                 
                 <div className="flex items-center space-x-2">
+                  <Label htmlFor="tool-name-filter" className="text-sm text-slate-600">Tool Name</Label>
+                  <Select
+                    value={toolNameFilter}
+                    onValueChange={setToolNameFilter}
+                  >
+                    <SelectTrigger id="tool-name-filter" data-testid="tool-name-filter" className="w-48 h-9 border-slate-300">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {uniqueToolNames.map((name) => (
+                        <SelectItem key={name} value={name}>{name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex items-center space-x-2">
                   <Label htmlFor="condition-filter" className="text-sm text-slate-600">Condition</Label>
                   <Select
                     value={conditionFilter}
@@ -327,10 +344,11 @@ export default function ToolsPage({ user }) {
                 </div>
                 
                 {/* Clear Filters Button */}
-                {(conditionFilter !== 'All' || statusFilter !== 'All' || searchTerm) && (
+                {(toolNameFilter !== 'All' || conditionFilter !== 'All' || statusFilter !== 'All' || searchTerm) && (
                   <Button
                     onClick={() => {
                       setSearchTerm('');
+                      setToolNameFilter('All');
                       setConditionFilter('All');
                       setStatusFilter('All');
                     }}
