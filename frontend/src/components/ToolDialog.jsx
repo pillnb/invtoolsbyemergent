@@ -24,7 +24,10 @@ export default function ToolDialog({ open, onOpenChange, tool, onSuccess }) {
     description: '',
     equipment_location: ''
   });
+  const [certificateFile, setCertificateFile] = useState(null);
+  const [manualFile, setManualFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
 
   useEffect(() => {
     if (tool) {
@@ -54,7 +57,47 @@ export default function ToolDialog({ open, onOpenChange, tool, onSuccess }) {
         equipment_location: ''
       });
     }
+    setCertificateFile(null);
+    setManualFile(null);
   }, [tool, open]);
+
+  const handleFileUpload = async (toolId) => {
+    const token = localStorage.getItem('token');
+    
+    if (certificateFile) {
+      const certFormData = new FormData();
+      certFormData.append('file', certificateFile);
+      
+      try {
+        await axios.post(`${API}/tools/${toolId}/upload-certificate`, certFormData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+        toast.success('Certificate uploaded successfully');
+      } catch (error) {
+        toast.error('Failed to upload certificate');
+      }
+    }
+    
+    if (manualFile) {
+      const manualFormData = new FormData();
+      manualFormData.append('file', manualFile);
+      
+      try {
+        await axios.post(`${API}/tools/${toolId}/upload-manual`, manualFormData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+        toast.success('Manual uploaded successfully');
+      } catch (error) {
+        toast.error('Failed to upload manual');
+      }
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -62,23 +105,36 @@ export default function ToolDialog({ open, onOpenChange, tool, onSuccess }) {
 
     try {
       const token = localStorage.getItem('token');
+      let toolId;
+      
       if (tool) {
         await axios.put(`${API}/tools/${tool.id}`, formData, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        toolId = tool.id;
         toast.success('Tool updated successfully');
       } else {
-        await axios.post(`${API}/tools`, formData, {
+        const response = await axios.post(`${API}/tools`, formData, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        toolId = response.data.id;
         toast.success('Tool added successfully');
       }
+      
+      // Upload files if any
+      if (certificateFile || manualFile) {
+        setUploadingFiles(true);
+        await handleFileUpload(toolId);
+        setUploadingFiles(false);
+      }
+      
       onSuccess();
       onOpenChange(false);
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Operation failed');
     } finally {
       setLoading(false);
+      setUploadingFiles(false);
     }
   };
 
@@ -210,6 +266,41 @@ export default function ToolDialog({ open, onOpenChange, tool, onSuccess }) {
                 className="border-slate-300 resize-none"
               />
             </div>
+            
+            {/* File Upload Section */}
+            <div className="space-y-2 col-span-2 pt-4 border-t border-slate-200">
+              <h3 className="font-semibold text-slate-700">Documents</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="calibration_certificate">Calibration Certificate</Label>
+                  <Input
+                    id="calibration_certificate"
+                    data-testid="certificate-file-input"
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => setCertificateFile(e.target.files[0])}
+                    className="border-slate-300"
+                  />
+                  {certificateFile && (
+                    <p className="text-xs text-slate-600">{certificateFile.name}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="equipment_manual">Equipment Manual</Label>
+                  <Input
+                    id="equipment_manual"
+                    data-testid="manual-file-input"
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    onChange={(e) => setManualFile(e.target.files[0])}
+                    className="border-slate-300"
+                  />
+                  {manualFile && (
+                    <p className="text-xs text-slate-600">{manualFile.name}</p>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
           <div className="flex justify-end space-x-3 pt-4">
             <Button
@@ -223,11 +314,11 @@ export default function ToolDialog({ open, onOpenChange, tool, onSuccess }) {
             </Button>
             <Button
               type="submit"
-              disabled={loading}
+              disabled={loading || uploadingFiles}
               data-testid="submit-tool-btn"
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
-              {loading ? 'Saving...' : (tool ? 'Update Tool' : 'Add Tool')}
+              {loading || uploadingFiles ? 'Saving...' : (tool ? 'Update Tool' : 'Add Tool')}
             </Button>
           </div>
         </form>
