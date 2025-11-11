@@ -84,11 +84,14 @@ export default function ToolDialog({ open, onOpenChange, tool, onSuccess }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="tool-dialog">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="tool-dialog" aria-describedby="tool-dialog-description">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-slate-800">
             {tool ? 'Edit Tool' : 'Add New Tool'}
           </DialogTitle>
+          <p id="tool-dialog-description" className="sr-only">
+            {tool ? 'Edit existing tool information' : 'Add a new tool to the system'}
+          </p>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="grid grid-cols-2 gap-4">
