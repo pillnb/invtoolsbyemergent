@@ -304,7 +304,9 @@ async def get_tools(current_user: dict = Depends(get_current_user)):
             status=status,
             condition=tool['condition'],
             description=tool.get('description'),
-            equipment_location=tool['equipment_location']
+            equipment_location=tool['equipment_location'],
+            calibration_certificate=tool.get('calibration_certificate'),
+            equipment_manual=tool.get('equipment_manual')
         ))
     
     return response
