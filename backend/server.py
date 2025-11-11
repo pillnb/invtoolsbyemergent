@@ -90,6 +90,8 @@ class Tool(BaseModel):
     condition: str  # 'Good' or 'Damaged'
     description: Optional[str] = None
     equipment_location: str
+    calibration_certificate: Optional[str] = None  # File path
+    equipment_manual: Optional[str] = None  # File path
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
