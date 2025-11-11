@@ -18,6 +18,7 @@ export default function ToolsPage({ user }) {
   const [tools, setTools] = useState([]);
   const [filteredTools, setFilteredTools] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [toolNameFilter, setToolNameFilter] = useState('All');
   const [conditionFilter, setConditionFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [loading, setLoading] = useState(true);
@@ -32,6 +33,9 @@ export default function ToolsPage({ user }) {
     fetchTools();
   }, []);
 
+  // Get unique tool names for filter dropdown
+  const uniqueToolNames = ['All', ...new Set(tools.map(tool => tool.equipment_name))];
+
   useEffect(() => {
     let filtered = tools.filter(tool => {
       // Text search filter
@@ -40,16 +44,19 @@ export default function ToolsPage({ user }) {
         tool.serial_no.toLowerCase().includes(searchTerm.toLowerCase()) ||
         tool.inventory_code.toLowerCase().includes(searchTerm.toLowerCase());
       
+      // Tool name filter
+      const matchesToolName = toolNameFilter === 'All' || tool.equipment_name === toolNameFilter;
+      
       // Condition filter
       const matchesCondition = conditionFilter === 'All' || tool.condition === conditionFilter;
       
       // Status filter
       const matchesStatus = statusFilter === 'All' || tool.status === statusFilter;
       
-      return matchesSearch && matchesCondition && matchesStatus;
+      return matchesSearch && matchesToolName && matchesCondition && matchesStatus;
     });
     setFilteredTools(filtered);
-  }, [searchTerm, conditionFilter, statusFilter, tools]);
+  }, [searchTerm, toolNameFilter, conditionFilter, statusFilter, tools]);
 
   const fetchTools = async () => {
     try {
