@@ -98,6 +98,69 @@ export default function Dashboard({ user, onLogout }) {
     }
   };
 
+  const handleDownloadBarcode = async (toolId, serialNo) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/tools/${toolId}/barcode`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `barcode_${serialNo}.png`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('Barcode downloaded successfully');
+    } catch (error) {
+      toast.error('Failed to download barcode');
+    }
+  };
+
+  const handleDownloadCertificate = async (toolId, toolName) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/tools/${toolId}/download-certificate`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${toolName}_certificate.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('Certificate downloaded successfully');
+    } catch (error) {
+      toast.error('Certificate not available');
+    }
+  };
+
+  const handleDownloadManual = async (toolId, toolName) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/tools/${toolId}/download-manual`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${toolName}_manual.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('Manual downloaded successfully');
+    } catch (error) {
+      toast.error('Manual not available');
+    }
+  };
+
   const getStatusBadge = (status) => {
     const styles = {
       'Valid': 'bg-green-100 text-green-800 border-green-200',
