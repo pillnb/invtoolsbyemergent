@@ -16,6 +16,8 @@ export default function Dashboard({ user, onLogout }) {
   const [tools, setTools] = useState([]);
   const [filteredTools, setFilteredTools] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [conditionFilter, setConditionFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState('All');
   const [loading, setLoading] = useState(true);
   const [toolDialogOpen, setToolDialogOpen] = useState(false);
   const [loanDialogOpen, setLoanDialogOpen] = useState(false);
@@ -29,13 +31,23 @@ export default function Dashboard({ user, onLogout }) {
   }, []);
 
   useEffect(() => {
-    const filtered = tools.filter(tool => 
-      tool.equipment_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tool.serial_no.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tool.inventory_code.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    let filtered = tools.filter(tool => {
+      // Text search filter
+      const matchesSearch = 
+        tool.equipment_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        tool.serial_no.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        tool.inventory_code.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Condition filter
+      const matchesCondition = conditionFilter === 'All' || tool.condition === conditionFilter;
+      
+      // Status filter
+      const matchesStatus = statusFilter === 'All' || tool.status === statusFilter;
+      
+      return matchesSearch && matchesCondition && matchesStatus;
+    });
     setFilteredTools(filtered);
-  }, [searchTerm, tools]);
+  }, [searchTerm, conditionFilter, statusFilter, tools]);
 
   const fetchTools = async () => {
     try {
