@@ -47,10 +47,10 @@ export default function LoansPage({ user }) {
     }
   };
 
-  const handleDownloadPDF = async (loanId) => {
+  const handleDownloadDocument = async (loanId, borrowerName, loanDate) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API}/loans/${loanId}/pdf`, {
+      const response = await axios.get(`${API}/loans/${loanId}/export`, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
       });
@@ -58,13 +58,14 @@ export default function LoansPage({ user }) {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `loan_${loanId}.pdf`);
+      const filename = `loan_${borrowerName.replace(/\s+/g, '_')}_${loanDate}.docx`;
+      link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
       link.remove();
-      toast.success('PDF downloaded successfully');
+      toast.success('Document downloaded successfully');
     } catch (error) {
-      toast.error('Failed to download PDF');
+      toast.error('Failed to download document');
     }
   };
 
