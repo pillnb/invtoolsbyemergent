@@ -876,6 +876,37 @@ async def delete_stock_item(item_id: str, current_user: dict = Depends(get_admin
         raise HTTPException(status_code=404, detail="Stock item not found")
     return {"message": "Stock item deleted successfully"}
 
+@api_router.post("/stock/consume")
+async def consume_stock(consume: StockConsume, current_user: dict = Depends(get_current_user)):
+    """Reduce stock quantity when consuming items"""
+    item = await db.stock_items.find_one({"id": consume.item_id}, {"_id": 0})
+    if not item:
+        raise HTTPException(status_code=404, detail="Stock item not found")
+    
+    if item['available_quantity'] < consume.quantity:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient stock. Available: {item['available_quantity']} {item['unit']}"
+        )
+    
+    new_quantity = item['available_quantity'] - consume.quantity
+    
+    await db.stock_items.update_one(
+        {"id": consume.item_id},
+        {"$set": {
+            "available_quantity": new_quantity,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {
+        "message": "Stock consumed successfully",
+        "item_name": item['item_name'],
+        "consumed_quantity": consume.quantity,
+        "remaining_quantity": new_quantity,
+        "unit": item['unit']
+    }
+
 @api_router.post("/stock/{item_id}/upload-receipt")
 async def upload_receipt(
     item_id: str,
