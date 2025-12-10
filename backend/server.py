@@ -782,50 +782,19 @@ async def export_loan_document(loan_id: str, current_user: dict = Depends(get_cu
                 new_row.cells[3].text = item['quantity']
                 new_row.cells[4].text = item['condition']
     
-    # Create temporary directory for conversion
-    with tempfile.TemporaryDirectory() as temp_dir:
-        temp_dir_path = Path(temp_dir)
-        
-        # Save the manipulated document to temp file
-        docx_path = temp_dir_path / "loan_document.docx"
-        rendered_doc.save(str(docx_path))
-        
-        # Convert DOCX to PDF using LibreOffice
-        pdf_path = temp_dir_path / "loan_document.pdf"
-        
-        try:
-            # Use LibreOffice in headless mode to convert
-            subprocess.run([
-                'libreoffice',
-                '--headless',
-                '--convert-to',
-                'pdf',
-                '--outdir',
-                str(temp_dir_path),
-                str(docx_path)
-            ], check=True, capture_output=True, timeout=30)
-            
-            # Read the generated PDF
-            if pdf_path.exists():
-                with open(pdf_path, 'rb') as pdf_file:
-                    pdf_content = pdf_file.read()
-                
-                # Return PDF as downloadable file
-                return StreamingResponse(
-                    io.BytesIO(pdf_content),
-                    media_type="application/pdf",
-                    headers={
-                        "Content-Disposition": f"attachment; filename=loan_{loan['borrower_name'].replace(' ', '_')}_{loan['loan_date']}.pdf"
-                    }
-                )
-            else:
-                raise HTTPException(status_code=500, detail="PDF conversion failed")
-                
-        except subprocess.TimeoutExpired:
-            raise HTTPException(status_code=500, detail="PDF conversion timeout")
-        except subprocess.CalledProcessError as e:
-            logger.error(f"LibreOffice conversion error: {e.stderr}")
-            raise HTTPException(status_code=500, detail=f"PDF conversion failed: {e.stderr.decode()}")
+    # Save the manipulated document to a buffer
+    final_buffer = io.BytesIO()
+    rendered_doc.save(final_buffer)
+    final_buffer.seek(0)
+    
+    # Return DOCX file (more reliable than PDF conversion)
+    return StreamingResponse(
+        final_buffer,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={
+            "Content-Disposition": f"attachment; filename=loan_{loan['borrower_name'].replace(' ', '_')}_{loan['loan_date']}.docx"
+        }
+    )
 
 # Keep old endpoint for backward compatibility (redirects to new one)
 @api_router.get("/loans/{loan_id}/pdf")
