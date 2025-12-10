@@ -705,101 +705,63 @@ async def create_loan(loan_create: LoanCreate, current_user: dict = Depends(get_
     await db.loans.insert_one(doc)
     return loan
 
-@api_router.get("/loans/{loan_id}/pdf")
-async def get_loan_pdf(loan_id: str, current_user: dict = Depends(get_current_user)):
+@api_router.get("/loans/{loan_id}/export")
+async def export_loan_document(loan_id: str, current_user: dict = Depends(get_current_user)):
+    """Export loan document using DOCX template"""
     loan = await db.loans.find_one({"id": loan_id}, {"_id": 0})
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
     
-    # Create PDF
+    # Load template
+    template_path = ROOT_DIR / "templates" / "loan_template.docx"
+    if not template_path.exists():
+        raise HTTPException(status_code=500, detail="Template file not found")
+    
+    doc = DocxTemplate(str(template_path))
+    
+    # Prepare items list for table
+    items = []
+    for idx, equipment in enumerate(loan['equipments'], 1):
+        items.append({
+            'no': idx,
+            'equipment_name': equipment['equipment_name'],
+            'serial_no': equipment['serial_no'],
+            'quantity': '1',  # Hardcoded as per requirement
+            'condition': equipment['condition']
+        })
+    
+    # Prepare context for template
+    context = {
+        'project_name': loan['project_name'],
+        'project_location': loan['project_location'],
+        'loan_date': loan['loan_date'],
+        'return_date': loan['return_date'],
+        'borrower_name': loan['borrower_name'],
+        'items': items
+    }
+    
+    # Render the template
+    doc.render(context)
+    
+    # Save to buffer
     buffer = io.BytesIO()
-    p = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
-    
-    # Title
-    p.setFont("Helvetica-Bold", 16)
-    p.drawString(50, height - 50, "EQUIPMENT LOAN FORM")
-    
-    # Form details
-    p.setFont("Helvetica", 10)
-    y = height - 100
-    
-    p.drawString(50, y, f"Borrower Name: {loan['borrower_name']}")
-    y -= 20
-    p.drawString(50, y, f"Loan Date: {loan['loan_date']}")
-    y -= 20
-    p.drawString(50, y, f"Return Date: {loan['return_date']}")
-    y -= 20
-    p.drawString(50, y, f"Project Name: {loan['project_name']}")
-    y -= 20
-    p.drawString(50, y, f"WBS Project No.: {loan['wbs_project_no']}")
-    y -= 20
-    p.drawString(50, y, f"Project Location: {loan['project_location']}")
-    y -= 30
-    
-    # Equipment table
-    p.setFont("Helvetica-Bold", 11)
-    p.drawString(50, y, "Equipment Details:")
-    y -= 20
-    
-    # Table headers
-    p.setFont("Helvetica-Bold", 9)
-    p.drawString(50, y, "No.")
-    p.drawString(100, y, "Equipment Name")
-    p.drawString(300, y, "Serial No.")
-    p.drawString(450, y, "Condition")
-    y -= 15
-    
-    # Equipment rows
-    p.setFont("Helvetica", 9)
-    for idx, eq in enumerate(loan['equipments'], 1):
-        p.drawString(50, y, str(idx))
-        p.drawString(100, y, eq['equipment_name'][:30])
-        p.drawString(300, y, eq['serial_no'])
-        p.drawString(450, y, eq['condition'])
-        y -= 15
-    
-    y -= 30
-    
-    # Signature section
-    p.setFont("Helvetica-Bold", 10)
-    p.drawString(50, y, "SIGNATURES")
-    y -= 30
-    
-    signatures = [
-        ("Borrower", 50),
-        ("Submitter", 180),
-        ("Approver", 310),
-        ("Coordinator", 440)
-    ]
-    
-    for sig_label, x_pos in signatures:
-        p.setFont("Helvetica", 9)
-        p.drawString(x_pos, y, sig_label + ":")
-        p.line(x_pos, y - 5, x_pos + 100, y - 5)
-        p.drawString(x_pos, y - 20, "Name:")
-        p.line(x_pos + 35, y - 25, x_pos + 100, y - 25)
-        p.drawString(x_pos, y - 35, "Date:")
-        p.line(x_pos + 30, y - 40, x_pos + 100, y - 40)
-    
-    y -= 80
-    p.setFont("Helvetica", 9)
-    p.drawString(50, y, "Senior Manager:")
-    p.line(150, y - 5, 300, y - 5)
-    p.drawString(50, y - 20, "Name:")
-    p.line(100, y - 25, 300, y - 25)
-    p.drawString(50, y - 35, "Date:")
-    p.line(100, y - 40, 300, y - 40)
-    
-    p.showPage()
-    p.save()
-    
+    doc.save(buffer)
     buffer.seek(0)
+    
+    # Return as downloadable file
     return StreamingResponse(
         buffer,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=loan_{loan_id}.pdf"}
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={
+            "Content-Disposition": f"attachment; filename=loan_{loan['borrower_name'].replace(' ', '_')}_{loan['loan_date']}.docx"
+        }
     )
+
+# Keep old endpoint for backward compatibility (redirects to new one)
+@api_router.get("/loans/{loan_id}/pdf")
+async def get_loan_pdf_legacy(loan_id: str, current_user: dict = Depends(get_current_user)):
+    """Legacy endpoint - redirects to export endpoint"""
+    return await export_loan_document(loan_id, current_user)
 
 # Calibration endpoints
 @api_router.get("/calibrations", response_model=List[Calibration])
