@@ -786,9 +786,9 @@ async def export_loan_document(loan_id: str, current_user: dict = Depends(get_cu
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_dir_path = Path(temp_dir)
         
-        # Save rendered DOCX to temp file
+        # Save the manipulated document to temp file
         docx_path = temp_dir_path / "loan_document.docx"
-        doc.save(str(docx_path))
+        rendered_doc.save(str(docx_path))
         
         # Convert DOCX to PDF using LibreOffice
         pdf_path = temp_dir_path / "loan_document.pdf"
