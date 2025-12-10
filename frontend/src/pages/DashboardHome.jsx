@@ -191,12 +191,16 @@ export default function DashboardHome({ user, onNavigate }) {
             </div>
           </CardContent>
         </Card>
-        <Card className="shadow-md">
+        <Card 
+          className="shadow-md hover:shadow-xl transition-all cursor-pointer border-2 hover:border-green-400"
+          onClick={() => onNavigate && onNavigate('loans')}
+        >
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600">Total Loans</p>
                 <p className="text-2xl font-bold text-slate-800 mt-1">{stats.totalLoans}</p>
+                <p className="text-xs text-green-600 mt-1 font-medium">Click to view all →</p>
               </div>
               <Badge className="bg-green-100 text-green-800 border-green-200">Records</Badge>
             </div>
