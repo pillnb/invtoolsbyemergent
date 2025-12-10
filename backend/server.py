@@ -715,8 +715,8 @@ async def export_loan_document(loan_id: str, current_user: dict = Depends(get_cu
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
     
-    # Load NEW template
-    template_path = ROOT_DIR / "templates" / "loan_template_new.docx"
+    # Load BKI format template
+    template_path = ROOT_DIR / "templates" / "loan_template_bki_format.docx"
     if not template_path.exists():
         raise HTTPException(status_code=500, detail="Template file not found")
     
