@@ -6,7 +6,7 @@ import { Badge } from '../components/ui/badge';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-export default function DashboardHome({ user }) {
+export default function DashboardHome({ user, onNavigate }) {
   const [stats, setStats] = useState({
     totalTools: 0,
     expiredTools: 0,
