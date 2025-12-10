@@ -707,7 +707,10 @@ async def create_loan(loan_create: LoanCreate, current_user: dict = Depends(get_
 
 @api_router.get("/loans/{loan_id}/export")
 async def export_loan_document(loan_id: str, current_user: dict = Depends(get_current_user)):
-    """Export loan document using DOCX template"""
+    """Export loan document using DOCX template and convert to PDF"""
+    import subprocess
+    import tempfile
+    
     loan = await db.loans.find_one({"id": loan_id}, {"_id": 0})
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
@@ -743,19 +746,50 @@ async def export_loan_document(loan_id: str, current_user: dict = Depends(get_cu
     # Render the template
     doc.render(context)
     
-    # Save to buffer
-    buffer = io.BytesIO()
-    doc.save(buffer)
-    buffer.seek(0)
-    
-    # Return as downloadable file
-    return StreamingResponse(
-        buffer,
-        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={
-            "Content-Disposition": f"attachment; filename=loan_{loan['borrower_name'].replace(' ', '_')}_{loan['loan_date']}.docx"
-        }
-    )
+    # Create temporary directory for conversion
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_dir_path = Path(temp_dir)
+        
+        # Save rendered DOCX to temp file
+        docx_path = temp_dir_path / "loan_document.docx"
+        doc.save(str(docx_path))
+        
+        # Convert DOCX to PDF using LibreOffice
+        pdf_path = temp_dir_path / "loan_document.pdf"
+        
+        try:
+            # Use LibreOffice in headless mode to convert
+            subprocess.run([
+                'libreoffice',
+                '--headless',
+                '--convert-to',
+                'pdf',
+                '--outdir',
+                str(temp_dir_path),
+                str(docx_path)
+            ], check=True, capture_output=True, timeout=30)
+            
+            # Read the generated PDF
+            if pdf_path.exists():
+                with open(pdf_path, 'rb') as pdf_file:
+                    pdf_content = pdf_file.read()
+                
+                # Return PDF as downloadable file
+                return StreamingResponse(
+                    io.BytesIO(pdf_content),
+                    media_type="application/pdf",
+                    headers={
+                        "Content-Disposition": f"attachment; filename=loan_{loan['borrower_name'].replace(' ', '_')}_{loan['loan_date']}.pdf"
+                    }
+                )
+            else:
+                raise HTTPException(status_code=500, detail="PDF conversion failed")
+                
+        except subprocess.TimeoutExpired:
+            raise HTTPException(status_code=500, detail="PDF conversion timeout")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"LibreOffice conversion error: {e.stderr}")
+            raise HTTPException(status_code=500, detail=f"PDF conversion failed: {e.stderr.decode()}")
 
 # Keep old endpoint for backward compatibility (redirects to new one)
 @api_router.get("/loans/{loan_id}/pdf")
