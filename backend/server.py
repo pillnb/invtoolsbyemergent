@@ -372,7 +372,9 @@ async def create_tool(tool_create: ToolCreate, current_user: dict = Depends(get_
         status=status,
         condition=tool.condition,
         description=tool.description,
-        equipment_location=tool.equipment_location
+        equipment_location=tool.equipment_location,
+        calibration_certificate=tool.calibration_certificate,
+        equipment_manual=tool.equipment_manual
     )
 
 @api_router.put("/tools/{tool_id}", response_model=ToolResponse)
