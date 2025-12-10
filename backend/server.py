@@ -204,6 +204,11 @@ class StockItemUpdate(BaseModel):
     unit: Optional[str] = None
     description: Optional[str] = None
 
+class StockConsume(BaseModel):
+    item_id: str
+    quantity: int
+    reason: Optional[str] = None
+
 # Helper functions
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
