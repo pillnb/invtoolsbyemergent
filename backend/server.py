@@ -747,6 +747,41 @@ async def export_loan_document(loan_id: str, current_user: dict = Depends(get_cu
     # Render the template
     doc.render(context)
     
+    # Manually handle table rows for multiple equipment items
+    # docxtpl's {%tr} syntax is tricky, so we'll add rows programmatically
+    from docx import Document as DocxDocument
+    from docx.oxml import OxmlElement
+    from copy import deepcopy
+    
+    # Save rendered doc to temp buffer first
+    temp_buffer = io.BytesIO()
+    doc.save(temp_buffer)
+    temp_buffer.seek(0)
+    
+    # Re-open as python-docx Document to manipulate table
+    rendered_doc = DocxDocument(temp_buffer)
+    
+    # Find the equipment table (first table in document)
+    if rendered_doc.tables:
+        equipment_table = rendered_doc.tables[0]
+        
+        # Row 1 has the first equipment item
+        # We need to duplicate this row for remaining items
+        if len(context['items']) > 1:
+            template_row = equipment_table.rows[1]
+            
+            # Add additional rows for remaining equipment
+            for item in context['items'][1:]:  # Skip first item (already in row 1)
+                # Add new row
+                new_row = equipment_table.add_row()
+                
+                # Copy formatting and fill with data
+                new_row.cells[0].text = str(item['no'])
+                new_row.cells[1].text = item['equipment_name']
+                new_row.cells[2].text = item['serial_no']
+                new_row.cells[3].text = item['quantity']
+                new_row.cells[4].text = item['condition']
+    
     # Create temporary directory for conversion
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_dir_path = Path(temp_dir)
