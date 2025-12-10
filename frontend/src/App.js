@@ -57,22 +57,19 @@ function App() {
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard':
-        return <DashboardHome user={user} />;
+        return <DashboardHome user={user} onNavigate={handleNavigate} />;
       case 'tools':
         return <ToolsPage user={user} />;
       case 'stock':
         return <StockManagementPage user={user} />;
+      case 'loans':
+        return <LoansPage user={user} />;
       case 'forms':
-        return (
-          <div className="p-8">
-            <h1 className="text-3xl font-bold text-slate-800">Forms</h1>
-            <p className="text-slate-600 mt-4">Forms features coming soon...</p>
-          </div>
-        );
+        return <FormsPage user={user} />;
       case 'analysis':
         return <AnalysisPage user={user} />;
       default:
-        return <DashboardHome user={user} />;
+        return <DashboardHome user={user} onNavigate={handleNavigate} />;
     }
   };
 
