@@ -715,8 +715,8 @@ async def export_loan_document(loan_id: str, current_user: dict = Depends(get_cu
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
     
-    # Load template
-    template_path = ROOT_DIR / "templates" / "loan_template.docx"
+    # Load NEW template
+    template_path = ROOT_DIR / "templates" / "loan_template_new.docx"
     if not template_path.exists():
         raise HTTPException(status_code=500, detail="Template file not found")
     
@@ -733,8 +733,9 @@ async def export_loan_document(loan_id: str, current_user: dict = Depends(get_cu
             'condition': equipment['condition']
         })
     
-    # Prepare context for template
+    # Prepare context for template with all required variables
     context = {
+        'WBS': loan.get('wbs_project_no', 'N/A'),  # WBS number
         'project_name': loan['project_name'],
         'project_location': loan['project_location'],
         'loan_date': loan['loan_date'],
