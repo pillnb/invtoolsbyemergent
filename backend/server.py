@@ -26,6 +26,7 @@ import barcode
 from barcode.writer import ImageWriter
 import qrcode
 from PIL import Image, ImageDraw, ImageFont
+from docxtpl import DocxTemplate
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
