@@ -1,7 +1,7 @@
 # Quick Fix: Login Not Working on Vercel
 
 ## 🔴 Problem
-Your Vercel deployment shows "Login failed" because the **backend API is not deployed**. The frontend is trying to connect to `https://invtools.preview.emergentagent.com` which is not accessible from Vercel.
+Your Vercel deployment shows "Login failed" because the **backend API is not deployed**. The frontend is trying to connect to `https://tooltracker-7.preview.emergentagent.com` which is not accessible from Vercel.
 
 ## ✅ Solution: Deploy Backend in 10 Minutes
 
