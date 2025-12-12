@@ -103,6 +103,7 @@ class ToolCreate(BaseModel):
     brand_type: str
     serial_no: str
     inventory_code: str
+    asset_number: Optional[str] = None
     periodic_inspection_date: Optional[str] = None
     calibration_date: Optional[str] = None
     calibration_validity_months: int = 12
@@ -116,6 +117,7 @@ class ToolResponse(BaseModel):
     brand_type: str
     serial_no: str
     inventory_code: str
+    asset_number: Optional[str]
     periodic_inspection_date: Optional[str]
     calibration_date: Optional[str]
     calibration_validity_months: int
