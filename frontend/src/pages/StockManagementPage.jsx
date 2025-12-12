@@ -373,6 +373,114 @@ export default function StockManagementPage({ user }) {
         isEditMode={isEditMode}
         onSuccess={fetchStockItems}
       />
+
+      {/* Consume Stock Dialog */}
+      <Dialog open={consumeDialogOpen} onOpenChange={setConsumeDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-slate-800">
+              Consume Stock
+            </DialogTitle>
+          </DialogHeader>
+          
+          {consumeItem && (
+            <form onSubmit={handleConsumeStock} className="space-y-4">
+              {/* Item Info */}
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="space-y-2">
+                  <div>
+                    <span className="text-xs text-slate-600">Item Name</span>
+                    <p className="font-medium text-slate-800">{consumeItem.item_name}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span className="text-xs text-slate-600">Available</span>
+                      <p className="font-bold text-green-600">
+                        {consumeItem.available_quantity} {consumeItem.unit}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-slate-600">Brand/Spec</span>
+                      <p className="text-sm text-slate-700">{consumeItem.brand_specifications}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quantity Input */}
+              <div className="space-y-2">
+                <Label htmlFor="consume-quantity">Quantity to Use *</Label>
+                <Input
+                  id="consume-quantity"
+                  type="number"
+                  min="1"
+                  max={consumeItem.available_quantity}
+                  value={consumeQuantity}
+                  onChange={(e) => setConsumeQuantity(e.target.value)}
+                  placeholder={`Max: ${consumeItem.available_quantity}`}
+                  required
+                  className="border-slate-300"
+                />
+              </div>
+
+              {/* Remaining Preview */}
+              {consumeQuantity && parseInt(consumeQuantity) > 0 && (
+                <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-slate-700">After Consumption:</span>
+                    <span className="font-bold text-orange-600">
+                      {Math.max(0, consumeItem.available_quantity - parseInt(consumeQuantity))} {consumeItem.unit}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Reason */}
+              <div className="space-y-2">
+                <Label htmlFor="consume-reason">Reason / Note</Label>
+                <Textarea
+                  id="consume-reason"
+                  value={consumeReason}
+                  onChange={(e) => setConsumeReason(e.target.value)}
+                  placeholder="Enter reason for consumption (optional)..."
+                  rows={3}
+                  className="border-slate-300 resize-none"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end space-x-3 pt-4 border-t border-slate-200">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setConsumeDialogOpen(false)}
+                  disabled={consuming}
+                  className="border-slate-300"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={consuming || !consumeQuantity}
+                  className="bg-orange-600 hover:bg-orange-700 text-white"
+                >
+                  {consuming ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Processing...
+                    </>
+                  ) : (
+                    'Consume Stock'
+                  )}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
