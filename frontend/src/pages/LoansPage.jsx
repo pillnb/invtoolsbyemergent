@@ -52,6 +52,40 @@ export default function LoansPage({ user }) {
     }
   };
 
+  const fetchTools = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/tools`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTools(response.data);
+    } catch (error) {
+      console.error('Failed to fetch tools:', error);
+    }
+  };
+
+  const handleEdit = (loan) => {
+    setSelectedLoan(loan);
+    setEditDialogOpen(true);
+  };
+
+  const handleDelete = async (loanId) => {
+    if (!window.confirm('Are you sure you want to delete this loan record?')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API}/loans/${loanId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Loan record deleted successfully');
+      fetchLoans();
+    } catch (error) {
+      toast.error('Failed to delete loan record');
+    }
+  };
+
   const handleDownloadDocument = async (loanId, borrowerName, loanDate) => {
     try {
       const token = localStorage.getItem('token');
