@@ -17,6 +17,7 @@ export default function ToolDialog({ open, onOpenChange, tool, onSuccess }) {
     brand_type: '',
     serial_no: '',
     inventory_code: '',
+    asset_number: '',
     periodic_inspection_date: '',
     calibration_date: '',
     calibration_validity_months: 12,
