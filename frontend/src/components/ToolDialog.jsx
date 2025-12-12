@@ -199,6 +199,17 @@ export default function ToolDialog({ open, onOpenChange, tool, onSuccess }) {
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="asset_number">Asset Number</Label>
+              <Input
+                id="asset_number"
+                data-testid="asset-number-input"
+                value={formData.asset_number}
+                onChange={(e) => setFormData({ ...formData, asset_number: e.target.value })}
+                className="border-slate-300"
+                placeholder="Optional"
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="periodic_inspection_date">Periodic Inspection Date</Label>
               <Input
                 id="periodic_inspection_date"
