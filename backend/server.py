@@ -687,7 +687,7 @@ async def export_tools_excel(current_user: dict = Depends(get_current_user)):
             cell.alignment = Alignment(horizontal='left', vertical='center')
     
     # Adjust column widths
-    column_widths = [5, 25, 20, 15, 15, 20, 18, 20, 15, 12, 30, 20]
+    column_widths = [5, 25, 20, 15, 15, 15, 20, 18, 20, 15, 12, 30, 20]
     for col_num, width in enumerate(column_widths, 1):
         ws.column_dimensions[ws.cell(row=1, column=col_num).column_letter].width = width
     
