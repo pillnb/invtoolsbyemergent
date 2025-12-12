@@ -149,9 +149,11 @@ export default function LoanDialog({ open, onOpenChange, tools, loan, onSuccess 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="loan-dialog" aria-describedby="loan-dialog-description">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-slate-800">Equipment Loan Form</DialogTitle>
+          <DialogTitle className="text-xl font-bold text-slate-800">
+            {loan ? 'Edit Loan Record' : 'Equipment Loan Form'}
+          </DialogTitle>
           <p id="loan-dialog-description" className="sr-only">
-            Create a new equipment loan record with borrower information and equipment details
+            {loan ? 'Edit existing equipment loan record' : 'Create a new equipment loan record with borrower information and equipment details'}
           </p>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
