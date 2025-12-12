@@ -636,7 +636,7 @@ async def export_tools_excel(current_user: dict = Depends(get_current_user)):
     
     # Headers
     headers = [
-        "No.", "Equipment Name", "Brand/Type", "Serial No.", "Inventory Code",
+        "No.", "Equipment Name", "Brand/Type", "Serial No.", "Inventory Code", "Asset Number",
         "Periodic Inspection Date", "Calibration Date", "Calibration Expiry Date",
         "Status", "Condition", "Description", "Equipment Location"
     ]
