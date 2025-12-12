@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-export default function LoanDialog({ open, onOpenChange, tools }) {
+export default function LoanDialog({ open, onOpenChange, tools, loan, onSuccess }) {
   const [formData, setFormData] = useState({
     borrower_name: '',
     loan_date: '',
