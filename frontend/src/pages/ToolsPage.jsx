@@ -412,6 +412,7 @@ export default function ToolsPage({ user }) {
                         <td className="px-4 py-3 text-sm font-medium text-slate-900">{tool.equipment_name}</td>
                         <td className="px-4 py-3 text-sm text-slate-700">{tool.brand_type}</td>
                         <td className="px-4 py-3 text-sm text-slate-700">{tool.serial_no}</td>
+                        <td className="px-4 py-3 text-sm text-slate-700">{tool.asset_number || '-'}</td>
                         <td className="px-4 py-3 text-sm text-slate-700">{tool.inventory_code}</td>
                         <td className="px-4 py-3 text-sm text-slate-700">{tool.calibration_date || '-'}</td>
                         <td className="px-4 py-3 text-sm text-slate-700">{tool.calibration_expiry_date || '-'}</td>
