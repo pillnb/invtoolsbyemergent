@@ -584,6 +584,15 @@ Status: {status}"""
     draw.text((x_centered, y_pos), text, fill='black', font=font_medium)
     y_pos += 35
     
+    # Asset number (if available)
+    if tool.get('asset_number'):
+        text = f"Asset No: {tool['asset_number']}"
+        bbox = draw.textbbox((0, 0), text, font=font_medium)
+        text_width = bbox[2] - bbox[0]
+        x_centered = (img_width - text_width) // 2
+        draw.text((x_centered, y_pos), text, fill='black', font=font_medium)
+        y_pos += 35
+    
     # Expiry date
     expiry_color = 'red' if status == 'Expired' else 'green' if status == 'Valid' else 'orange'
     text = f"Expiry: {expiry_date or 'N/A'}"
