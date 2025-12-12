@@ -87,6 +87,7 @@ class Tool(BaseModel):
     brand_type: str
     serial_no: str
     inventory_code: str
+    asset_number: Optional[str] = None
     periodic_inspection_date: Optional[str] = None
     calibration_date: Optional[str] = None
     calibration_validity_months: int = 12  # Default 12 months
