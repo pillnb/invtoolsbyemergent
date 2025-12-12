@@ -22,6 +22,34 @@ export default function LoanDialog({ open, onOpenChange, tools, loan, onSuccess 
   });
   const [loading, setLoading] = useState(false);
 
+  // Populate form when editing
+  useEffect(() => {
+    if (loan) {
+      setFormData({
+        borrower_name: loan.borrower_name || '',
+        loan_date: loan.loan_date || '',
+        return_date: loan.return_date || '',
+        project_name: loan.project_name || '',
+        wbs_project_no: loan.wbs_project_no || '',
+        project_location: loan.project_location || '',
+        equipments: loan.equipments && loan.equipments.length > 0 
+          ? loan.equipments 
+          : [{ equipment_name: '', serial_no: '', condition: '' }]
+      });
+    } else {
+      // Reset form when creating new loan
+      setFormData({
+        borrower_name: '',
+        loan_date: '',
+        return_date: '',
+        project_name: '',
+        wbs_project_no: '',
+        project_location: '',
+        equipments: [{ equipment_name: '', serial_no: '', condition: '' }]
+      });
+    }
+  }, [loan, open]);
+
   const addEquipment = () => {
     if (formData.equipments.length < 5) {
       setFormData({
