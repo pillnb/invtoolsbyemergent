@@ -671,6 +671,7 @@ async def export_tools_excel(current_user: dict = Depends(get_current_user)):
             tool['brand_type'],
             tool['serial_no'],
             tool['inventory_code'],
+            tool.get('asset_number', ''),
             tool.get('periodic_inspection_date', ''),
             tool.get('calibration_date', ''),
             expiry_date or '',
