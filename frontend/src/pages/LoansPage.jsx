@@ -247,6 +247,18 @@ export default function LoansPage({ user }) {
           ))
         )}
       </div>
+
+      {/* Edit Dialog */}
+      <LoanDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        tools={tools}
+        loan={selectedLoan}
+        onSuccess={() => {
+          fetchLoans();
+          setSelectedLoan(null);
+        }}
+      />
     </div>
   );
 }
