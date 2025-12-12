@@ -95,27 +95,38 @@ export default function LoanDialog({ open, onOpenChange, tools, loan, onSuccess 
 
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post(`${API}/loans`, formData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      let response;
       
-      toast.success('Loan created successfully');
-      
-      // Download PDF
-      const pdfResponse = await axios.get(`${API}/loans/${response.data.id}/pdf`, {
-        headers: { Authorization: `Bearer ${token}` },
-        responseType: 'blob'
-      });
-      
-      const url = window.URL.createObjectURL(new Blob([pdfResponse.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `loan_${response.data.id}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      if (loan && loan.id) {
+        // Update existing loan
+        response = await axios.put(`${API}/loans/${loan.id}`, formData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success('Loan updated successfully');
+      } else {
+        // Create new loan
+        response = await axios.post(`${API}/loans`, formData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success('Loan created successfully');
+        
+        // Download PDF only for new loans
+        const pdfResponse = await axios.get(`${API}/loans/${response.data.id}/export`, {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'blob'
+        });
+        
+        const url = window.URL.createObjectURL(new Blob([pdfResponse.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `loan_${response.data.id}.docx`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      }
       
       onOpenChange(false);
+      if (onSuccess) onSuccess();
       
       // Reset form
       setFormData({
