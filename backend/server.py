@@ -334,6 +334,7 @@ async def get_tools(current_user: dict = Depends(get_current_user)):
             brand_type=tool['brand_type'],
             serial_no=tool['serial_no'],
             inventory_code=tool['inventory_code'],
+            asset_number=tool.get('asset_number'),
             periodic_inspection_date=tool.get('periodic_inspection_date'),
             calibration_date=tool.get('calibration_date'),
             calibration_validity_months=tool.get('calibration_validity_months', 12),
