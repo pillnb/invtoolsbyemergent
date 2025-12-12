@@ -20,6 +20,13 @@ export default function StockManagementPage({ user }) {
   const [stockDialogOpen, setStockDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  
+  // Consume stock dialog
+  const [consumeDialogOpen, setConsumeDialogOpen] = useState(false);
+  const [consumeItem, setConsumeItem] = useState(null);
+  const [consumeQuantity, setConsumeQuantity] = useState('');
+  const [consumeReason, setConsumeReason] = useState('');
+  const [consuming, setConsuming] = useState(false);
 
   const isAdmin = user.role === 'admin';
 
