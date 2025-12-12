@@ -720,6 +720,35 @@ async def create_loan(loan_create: LoanCreate, current_user: dict = Depends(get_
     await db.loans.insert_one(doc)
     return loan
 
+@api_router.put("/loans/{loan_id}")
+async def update_loan(loan_id: str, loan_update: LoanCreate, current_user: dict = Depends(get_admin_user)):
+    """Update an existing loan record"""
+    existing_loan = await db.loans.find_one({"id": loan_id}, {"_id": 0})
+    if not existing_loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    
+    update_doc = {
+        **loan_update.model_dump(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "updated_by": current_user['username']
+    }
+    
+    await db.loans.update_one(
+        {"id": loan_id},
+        {"$set": update_doc}
+    )
+    
+    updated_loan = await db.loans.find_one({"id": loan_id}, {"_id": 0})
+    return updated_loan
+
+@api_router.delete("/loans/{loan_id}")
+async def delete_loan(loan_id: str, current_user: dict = Depends(get_admin_user)):
+    """Delete a loan record"""
+    result = await db.loans.delete_one({"id": loan_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    return {"message": "Loan deleted successfully"}
+
 @api_router.get("/loans/{loan_id}/export")
 async def export_loan_document(loan_id: str, current_user: dict = Depends(get_current_user)):
     """Export loan document using DOCX template and convert to PDF"""
