@@ -369,6 +369,7 @@ async def create_tool(tool_create: ToolCreate, current_user: dict = Depends(get_
         brand_type=tool.brand_type,
         serial_no=tool.serial_no,
         inventory_code=tool.inventory_code,
+        asset_number=tool.asset_number,
         periodic_inspection_date=tool.periodic_inspection_date,
         calibration_date=tool.calibration_date,
         calibration_validity_months=tool.calibration_validity_months,
