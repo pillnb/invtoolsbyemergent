@@ -115,6 +115,52 @@ export default function StockManagementPage({ user }) {
     }
   };
 
+  const handleOpenConsumeDialog = (item) => {
+    setConsumeItem(item);
+    setConsumeQuantity('');
+    setConsumeReason('');
+    setConsumeDialogOpen(true);
+  };
+
+  const handleConsumeStock = async (e) => {
+    e.preventDefault();
+    
+    if (!consumeQuantity || parseInt(consumeQuantity) <= 0) {
+      toast.error('Please enter a valid quantity');
+      return;
+    }
+
+    if (parseInt(consumeQuantity) > consumeItem.available_quantity) {
+      toast.error(`Insufficient stock. Available: ${consumeItem.available_quantity} ${consumeItem.unit}`);
+      return;
+    }
+
+    setConsuming(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        `${API}/stock/consume`,
+        {
+          item_id: consumeItem.id,
+          quantity: parseInt(consumeQuantity),
+          reason: consumeReason
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      toast.success('Stock consumed successfully');
+      setConsumeDialogOpen(false);
+      setConsumeItem(null);
+      setConsumeQuantity('');
+      setConsumeReason('');
+      fetchStockItems();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to consume stock');
+    } finally {
+      setConsuming(false);
+    }
+  };
+
   return (
     <div className="p-8 space-y-6">
       {/* Header */}
