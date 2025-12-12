@@ -525,12 +525,23 @@ async def generate_barcode(tool_id: str, current_user: dict = Depends(get_curren
     )
     
     # Create QR code data
-    qr_data = f"""Equipment Information:
-Device Name: {tool['equipment_name']}
-Serial Number: {tool['serial_no']}
-Owner: PT Biro Klasifikasi Indonesia
-Calibration Expiry: {expiry_date or 'N/A'}
-Status: {status}"""
+    qr_data_parts = [
+        "Equipment Information:",
+        f"Device Name: {tool['equipment_name']}",
+        f"Serial Number: {tool['serial_no']}"
+    ]
+    
+    # Add Asset Number if available
+    if tool.get('asset_number'):
+        qr_data_parts.append(f"Asset Number: {tool['asset_number']}")
+    
+    qr_data_parts.extend([
+        "Owner: PT Biro Klasifikasi Indonesia",
+        f"Calibration Expiry: {expiry_date or 'N/A'}",
+        f"Status: {status}"
+    ])
+    
+    qr_data = "\n".join(qr_data_parts)
     
     # Generate QR code
     qr = qrcode.QRCode(
