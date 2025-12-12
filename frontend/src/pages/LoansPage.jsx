@@ -21,6 +21,7 @@ export default function LoansPage({ user }) {
 
   useEffect(() => {
     fetchLoans();
+    fetchTools();
   }, []);
 
   useEffect(() => {
