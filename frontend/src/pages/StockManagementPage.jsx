@@ -318,30 +318,44 @@ export default function StockManagementPage({ user }) {
                           <span className="text-xs text-slate-400">-</span>
                         )}
                       </td>
-                      {isAdmin && (
-                        <td className="px-4 py-3 text-sm">
-                          <div className="flex space-x-2">
-                            <Button
-                              onClick={() => handleEditStock(item)}
-                              size="sm"
-                              variant="ghost"
-                              data-testid={`edit-stock-btn-${index}`}
-                              className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                            >
-                              Add Stock
-                            </Button>
-                            <Button
-                              onClick={() => handleDeleteStock(item.id)}
-                              size="sm"
-                              variant="ghost"
-                              data-testid={`delete-stock-btn-${index}`}
-                              className="text-red-600 hover:text-red-800 hover:bg-red-50"
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        </td>
-                      )}
+                      <td className="px-4 py-3 text-sm">
+                        <div className="flex space-x-2">
+                          <Button
+                            onClick={() => handleOpenConsumeDialog(item)}
+                            size="sm"
+                            variant="ghost"
+                            data-testid={`consume-stock-btn-${index}`}
+                            className="text-orange-600 hover:text-orange-800 hover:bg-orange-50"
+                          >
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                            </svg>
+                            Consume
+                          </Button>
+                          {isAdmin && (
+                            <>
+                              <Button
+                                onClick={() => handleEditStock(item)}
+                                size="sm"
+                                variant="ghost"
+                                data-testid={`edit-stock-btn-${index}`}
+                                className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                              >
+                                Add Stock
+                              </Button>
+                              <Button
+                                onClick={() => handleDeleteStock(item.id)}
+                                size="sm"
+                                variant="ghost"
+                                data-testid={`delete-stock-btn-${index}`}
+                                className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                              >
+                                Delete
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
