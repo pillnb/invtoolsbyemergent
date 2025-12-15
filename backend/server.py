@@ -50,6 +50,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
 SECRET_KEY = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
 ALGORITHM = "HS256"
+ENVIRONMENT = os.environ.get('ENVIRONMENT', 'production')  # Default to production for safety
 
 # Create the main app
 app = FastAPI()
