@@ -55,6 +55,12 @@ ALGORITHM = "HS256"
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
+# Health check endpoint for Kubernetes
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Kubernetes liveness and readiness probes"""
+    return {"status": "healthy", "service": "tool-management-api"}
+
 # Models
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
