@@ -251,7 +251,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         raise HTTPException(status_code=401, detail="User not found")
     return user
 
-async def get_admin_user(current_user: dict = Depends(get_current_user)):
+async def get_admin_user():
     if current_user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     return current_user
@@ -325,7 +325,7 @@ async def login(user_login: UserLogin):
     return TokenResponse(access_token=access_token, token_type="bearer", user=user_response)
 
 @api_router.get("/auth/me", response_model=UserResponse)
-async def get_me(current_user: dict = Depends(get_current_user)):
+async def get_me():
     return UserResponse(
         id=current_user["id"],
         username=current_user["username"],
@@ -335,7 +335,7 @@ async def get_me(current_user: dict = Depends(get_current_user)):
 
 # Tool endpoints
 @api_router.get("/tools", response_model=List[ToolResponse])
-async def get_tools(current_user: dict = Depends(get_current_user)):
+async def get_tools():
     tools = await db.tools.find({}, {"_id": 0}).to_list(1000)
     
     response = []
@@ -504,7 +504,7 @@ async def upload_manual(
     return {"message": "Manual uploaded successfully", "file_path": relative_path}
 
 @api_router.get("/tools/{tool_id}/download-certificate")
-async def download_certificate(tool_id: str, current_user: dict = Depends(get_current_user)):
+async def download_certificate(tool_id: str):
     tool = await db.tools.find_one({"id": tool_id}, {"_id": 0})
     if not tool or not tool.get('calibration_certificate'):
         raise HTTPException(status_code=404, detail="Certificate not found")
@@ -516,7 +516,7 @@ async def download_certificate(tool_id: str, current_user: dict = Depends(get_cu
     return FileResponse(file_path, filename=f"{tool['equipment_name']}_certificate{file_path.suffix}")
 
 @api_router.get("/tools/{tool_id}/download-manual")
-async def download_manual(tool_id: str, current_user: dict = Depends(get_current_user)):
+async def download_manual(tool_id: str):
     tool = await db.tools.find_one({"id": tool_id}, {"_id": 0})
     if not tool or not tool.get('equipment_manual'):
         raise HTTPException(status_code=404, detail="Manual not found")
@@ -528,7 +528,7 @@ async def download_manual(tool_id: str, current_user: dict = Depends(get_current
     return FileResponse(file_path, filename=f"{tool['equipment_name']}_manual{file_path.suffix}")
 
 @api_router.get("/tools/{tool_id}/barcode")
-async def generate_barcode(tool_id: str, current_user: dict = Depends(get_current_user)):
+async def generate_barcode(tool_id: str):
     tool = await db.tools.find_one({"id": tool_id}, {"_id": 0})
     if not tool:
         raise HTTPException(status_code=404, detail="Tool not found")
@@ -653,7 +653,7 @@ async def generate_barcode(tool_id: str, current_user: dict = Depends(get_curren
     })
 
 @api_router.get("/tools/export/excel")
-async def export_tools_excel(current_user: dict = Depends(get_current_user)):
+async def export_tools_excel():
     tools = await db.tools.find({}, {"_id": 0}).to_list(1000)
     
     wb = Workbook()
@@ -730,7 +730,7 @@ async def export_tools_excel(current_user: dict = Depends(get_current_user)):
 
 # Loan endpoints
 @api_router.get("/loans", response_model=List[Loan])
-async def get_loans(current_user: dict = Depends(get_current_user)):
+async def get_loans():
     loans = await db.loans.find({}, {"_id": 0}).to_list(1000)
     return loans
 
@@ -776,7 +776,7 @@ async def delete_loan(loan_id: str, current_user: dict = Depends(get_admin_user)
     return {"message": "Loan deleted successfully"}
 
 @api_router.get("/loans/{loan_id}/export")
-async def export_loan_document(loan_id: str, current_user: dict = Depends(get_current_user)):
+async def export_loan_document(loan_id: str):
     """Export loan document using DOCX template and convert to PDF"""
     import subprocess
     import tempfile
@@ -868,13 +868,13 @@ async def export_loan_document(loan_id: str, current_user: dict = Depends(get_cu
 
 # Keep old endpoint for backward compatibility (redirects to new one)
 @api_router.get("/loans/{loan_id}/pdf")
-async def get_loan_pdf_legacy(loan_id: str, current_user: dict = Depends(get_current_user)):
+async def get_loan_pdf_legacy(loan_id: str):
     """Legacy endpoint - redirects to export endpoint"""
     return await export_loan_document(loan_id, current_user)
 
 # Calibration endpoints
 @api_router.get("/calibrations", response_model=List[Calibration])
-async def get_calibrations(current_user: dict = Depends(get_current_user)):
+async def get_calibrations():
     calibrations = await db.calibrations.find({}, {"_id": 0}).to_list(1000)
     return calibrations
 
@@ -899,7 +899,7 @@ async def create_calibration(cal_create: CalibrationCreate, current_user: dict =
 
 # Stock Management endpoints
 @api_router.get("/stock", response_model=List[StockItem])
-async def get_stock_items(current_user: dict = Depends(get_current_user)):
+async def get_stock_items():
     items = await db.stock_items.find({}, {"_id": 0}).to_list(1000)
     return items
 
@@ -951,7 +951,7 @@ async def delete_stock_item(item_id: str, current_user: dict = Depends(get_admin
     return {"message": "Stock item deleted successfully"}
 
 @api_router.post("/stock/consume")
-async def consume_stock(consume: StockConsume, current_user: dict = Depends(get_current_user)):
+async def consume_stock(consume: StockConsume):
     """Reduce stock quantity when consuming items"""
     item = await db.stock_items.find_one({"id": consume.item_id}, {"_id": 0})
     if not item:
@@ -1009,7 +1009,7 @@ async def upload_receipt(
     return {"message": "Receipt uploaded successfully", "file_path": relative_path}
 
 @api_router.get("/stock/{item_id}/download-receipt")
-async def download_receipt(item_id: str, current_user: dict = Depends(get_current_user)):
+async def download_receipt(item_id: str):
     item = await db.stock_items.find_one({"id": item_id}, {"_id": 0})
     if not item or not item.get('purchase_receipt'):
         raise HTTPException(status_code=404, detail="Receipt not found")
@@ -1022,7 +1022,7 @@ async def download_receipt(item_id: str, current_user: dict = Depends(get_curren
 
 # Analysis endpoints
 @api_router.get("/analysis/tools-usage")
-async def get_tools_usage_analysis(current_user: dict = Depends(get_current_user)):
+async def get_tools_usage_analysis():
     """Analyze which tools are frequently used based on loan records"""
     loans = await db.loans.find({}, {"_id": 0}).to_list(1000)
     
@@ -1040,7 +1040,7 @@ async def get_tools_usage_analysis(current_user: dict = Depends(get_current_user
     return [{"equipment_name": name, "usage_count": count} for name, count in sorted_usage[:10]]
 
 @api_router.get("/analysis/tools-damaged")
-async def get_tools_damaged_analysis(current_user: dict = Depends(get_current_user)):
+async def get_tools_damaged_analysis():
     """Analyze damaged tools by type and brand"""
     tools = await db.tools.find({"condition": "Damaged"}, {"_id": 0}).to_list(1000)
     
@@ -1069,7 +1069,7 @@ async def get_tools_damaged_analysis(current_user: dict = Depends(get_current_us
     }
 
 @api_router.get("/analysis/tools-lost")
-async def get_tools_lost_analysis(current_user: dict = Depends(get_current_user)):
+async def get_tools_lost_analysis():
     """Analyze lost tools - tools with status Unknown or never returned from loans"""
     # For now, we'll identify potentially lost tools as those with Unknown status
     tools = await db.tools.find({}, {"_id": 0}).to_list(1000)
@@ -1094,7 +1094,7 @@ async def get_tools_lost_analysis(current_user: dict = Depends(get_current_user)
     }
 
 @api_router.get("/analysis/stock-requested")
-async def get_stock_requested_analysis(current_user: dict = Depends(get_current_user)):
+async def get_stock_requested_analysis():
     """Analyze frequently requested stock items based on low quantities"""
     stock_items = await db.stock_items.find({}, {"_id": 0}).to_list(1000)
     
@@ -1119,7 +1119,7 @@ async def get_stock_requested_analysis(current_user: dict = Depends(get_current_
     }
 
 @api_router.get("/analysis/stock-purchased")
-async def get_stock_purchased_analysis(current_user: dict = Depends(get_current_user)):
+async def get_stock_purchased_analysis():
     """Analyze frequently purchased items by brand and name"""
     stock_items = await db.stock_items.find({}, {"_id": 0}).to_list(1000)
     
@@ -1148,7 +1148,7 @@ async def get_stock_purchased_analysis(current_user: dict = Depends(get_current_
     }
 
 @api_router.get("/analysis/summary")
-async def get_analysis_summary(current_user: dict = Depends(get_current_user)):
+async def get_analysis_summary():
     """Get overall summary statistics for analysis dashboard"""
     tools = await db.tools.find({}, {"_id": 0}).to_list(1000)
     loans = await db.loans.find({}, {"_id": 0}).to_list(1000)
