@@ -251,10 +251,11 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         raise HTTPException(status_code=401, detail="User not found")
     return user
 
-async def get_admin_user():
-    if current_user["role"] != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
-    return current_user
+# Authentication removed - admin check disabled
+# async def get_admin_user():
+#     if current_user["role"] != "admin":
+#         raise HTTPException(status_code=403, detail="Admin access required")
+#     return current_user
 
 def calculate_tool_status(calibration_date: Optional[str], validity_months: int):
     if not calibration_date:
