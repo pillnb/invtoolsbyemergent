@@ -16,27 +16,19 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 function App() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Auto-login: Set default user without authentication
+  const [user, setUser] = useState({
+    id: 'auto-login-user',
+    username: 'admin',
+    role: 'admin',
+    full_name: 'System Administrator'
+  });
+  const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState('dashboard');
 
+  // No authentication check needed - auto-login enabled
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      axios.get(`${API}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-        .then(response => {
-          setUser(response.data);
-          setLoading(false);
-        })
-        .catch(() => {
-          localStorage.removeItem('token');
-          setLoading(false);
-        });
-    } else {
-      setLoading(false);
-    }
+    // User is automatically logged in, no need to check token
   }, []);
 
   const handleLogin = (userData, token) => {
@@ -87,24 +79,16 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route 
-            path="/login" 
-            element={user ? <Navigate to="/" /> : <LoginPage onLogin={handleLogin} />} 
-          />
-          <Route 
-            path="/" 
+            path="/*" 
             element={
-              user ? (
-                <DashboardLayout 
-                  user={user} 
-                  onLogout={handleLogout}
-                  currentPage={currentPage}
-                  onNavigate={handleNavigate}
-                >
-                  {renderPage()}
-                </DashboardLayout>
-              ) : (
-                <Navigate to="/login" />
-              )
+              <DashboardLayout 
+                user={user} 
+                onLogout={handleLogout}
+                currentPage={currentPage}
+                onNavigate={handleNavigate}
+              >
+                {renderPage()}
+              </DashboardLayout>
             } 
           />
         </Routes>
