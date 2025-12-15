@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Test the new features implemented in the Tool Management application: Dashboard clickable Total Loans card, Loan Records page, Forms page Stock Consumption, and Navigation"
+user_problem_statement: "Test the login functionality with detailed debugging to understand why the user is seeing 'Login failed' error."
 
 frontend:
   - task: "Dashboard - Clickable Total Loans Card"
