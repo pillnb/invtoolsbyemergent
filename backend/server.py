@@ -367,7 +367,7 @@ async def get_tools():
     return response
 
 @api_router.post("/tools", response_model=ToolResponse)
-async def create_tool(tool_create: ToolCreate, current_user: dict = Depends(get_admin_user)):
+async def create_tool(tool_create: ToolCreate):
     tool = Tool(**tool_create.model_dump())
     doc = tool.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
@@ -400,7 +400,7 @@ async def create_tool(tool_create: ToolCreate, current_user: dict = Depends(get_
     )
 
 @api_router.put("/tools/{tool_id}", response_model=ToolResponse)
-async def update_tool(tool_id: str, tool_update: ToolCreate, current_user: dict = Depends(get_admin_user)):
+async def update_tool(tool_id: str, tool_update: ToolCreate):
     existing_tool = await db.tools.find_one({"id": tool_id}, {"_id": 0})
     if not existing_tool:
         raise HTTPException(status_code=404, detail="Tool not found")
@@ -432,7 +432,7 @@ async def update_tool(tool_id: str, tool_update: ToolCreate, current_user: dict 
     )
 
 @api_router.delete("/tools/{tool_id}")
-async def delete_tool(tool_id: str, current_user: dict = Depends(get_admin_user)):
+async def delete_tool(tool_id: str):
     tool = await db.tools.find_one({"id": tool_id}, {"_id": 0})
     if tool:
         # Delete associated files
@@ -454,7 +454,7 @@ async def delete_tool(tool_id: str, current_user: dict = Depends(get_admin_user)
 async def upload_certificate(
     tool_id: str,
     file: UploadFile = File(...),
-    current_user: dict = Depends(get_admin_user)
+    
 ):
     tool = await db.tools.find_one({"id": tool_id}, {"_id": 0})
     if not tool:
@@ -481,7 +481,7 @@ async def upload_certificate(
 async def upload_manual(
     tool_id: str,
     file: UploadFile = File(...),
-    current_user: dict = Depends(get_admin_user)
+    
 ):
     tool = await db.tools.find_one({"id": tool_id}, {"_id": 0})
     if not tool:
@@ -736,7 +736,7 @@ async def get_loans():
     return loans
 
 @api_router.post("/loans", response_model=Loan)
-async def create_loan(loan_create: LoanCreate, current_user: dict = Depends(get_admin_user)):
+async def create_loan(loan_create: LoanCreate):
     if len(loan_create.equipments) > 5:
         raise HTTPException(status_code=400, detail="Maximum 5 equipments allowed per loan")
     
@@ -748,7 +748,7 @@ async def create_loan(loan_create: LoanCreate, current_user: dict = Depends(get_
     return loan
 
 @api_router.put("/loans/{loan_id}")
-async def update_loan(loan_id: str, loan_update: LoanCreate, current_user: dict = Depends(get_admin_user)):
+async def update_loan(loan_id: str, loan_update: LoanCreate):
     """Update an existing loan record"""
     existing_loan = await db.loans.find_one({"id": loan_id}, {"_id": 0})
     if not existing_loan:
@@ -769,7 +769,7 @@ async def update_loan(loan_id: str, loan_update: LoanCreate, current_user: dict 
     return updated_loan
 
 @api_router.delete("/loans/{loan_id}")
-async def delete_loan(loan_id: str, current_user: dict = Depends(get_admin_user)):
+async def delete_loan(loan_id: str):
     """Delete a loan record"""
     result = await db.loans.delete_one({"id": loan_id})
     if result.deleted_count == 0:
@@ -880,7 +880,7 @@ async def get_calibrations():
     return calibrations
 
 @api_router.post("/calibrations", response_model=Calibration)
-async def create_calibration(cal_create: CalibrationCreate, current_user: dict = Depends(get_admin_user)):
+async def create_calibration(cal_create: CalibrationCreate):
     calibration = Calibration(**cal_create.model_dump(), created_by=current_user["username"])
     doc = calibration.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
@@ -905,7 +905,7 @@ async def get_stock_items():
     return items
 
 @api_router.post("/stock", response_model=StockItem)
-async def create_stock_item(item_create: StockItemCreate, current_user: dict = Depends(get_admin_user)):
+async def create_stock_item(item_create: StockItemCreate):
     item = StockItem(**item_create.model_dump())
     doc = item.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
@@ -918,7 +918,7 @@ async def create_stock_item(item_create: StockItemCreate, current_user: dict = D
 async def update_stock_item(
     item_id: str, 
     item_update: StockItemUpdate, 
-    current_user: dict = Depends(get_admin_user)
+    
 ):
     existing_item = await db.stock_items.find_one({"id": item_id}, {"_id": 0})
     if not existing_item:
@@ -937,7 +937,7 @@ async def update_stock_item(
     return StockItem(**updated_item)
 
 @api_router.delete("/stock/{item_id}")
-async def delete_stock_item(item_id: str, current_user: dict = Depends(get_admin_user)):
+async def delete_stock_item(item_id: str):
     item = await db.stock_items.find_one({"id": item_id}, {"_id": 0})
     if item:
         # Delete associated receipt file
@@ -986,7 +986,7 @@ async def consume_stock(consume: StockConsume):
 async def upload_receipt(
     item_id: str,
     file: UploadFile = File(...),
-    current_user: dict = Depends(get_admin_user)
+    
 ):
     item = await db.stock_items.find_one({"id": item_id}, {"_id": 0})
     if not item:
