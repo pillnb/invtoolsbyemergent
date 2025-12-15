@@ -307,6 +307,14 @@ async def login(user_login: UserLogin):
     if not user or not verify_password(user_login.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid username or password")
     
+    # Block default password in production environment
+    if ENVIRONMENT == "production":
+        if user_login.username == "admin" and user_login.password == "admin123":
+            raise HTTPException(
+                status_code=403, 
+                detail="Default password not allowed in production. Please contact administrator to set a secure password."
+            )
+    
     access_token = create_access_token(data={"sub": user["username"]})
     user_response = UserResponse(
         id=user["id"],
