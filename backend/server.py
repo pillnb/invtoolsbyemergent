@@ -748,7 +748,7 @@ async def create_loan(loan_create: LoanCreate, current_user: dict = Depends(get_
     return loan
 
 @api_router.put("/loans/{loan_id}")
-async def update_loan(loan_id: str, loan_update: LoanCreate):
+async def update_loan(loan_id: str, loan_update: LoanCreate, current_user: dict = Depends(get_current_user)):
     """Update an existing loan record"""
     existing_loan = await db.loans.find_one({"id": loan_id}, {"_id": 0})
     if not existing_loan:
