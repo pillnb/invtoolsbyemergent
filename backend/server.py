@@ -736,7 +736,7 @@ async def get_loans():
     return loans
 
 @api_router.post("/loans", response_model=Loan)
-async def create_loan(loan_create: LoanCreate):
+async def create_loan(loan_create: LoanCreate, current_user: dict = Depends(get_current_user)):
     if len(loan_create.equipments) > 5:
         raise HTTPException(status_code=400, detail="Maximum 5 equipments allowed per loan")
     
