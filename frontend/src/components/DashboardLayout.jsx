@@ -130,7 +130,7 @@ export default function DashboardLayout({ user, onLogout, children, currentPage,
           <div className={`flex items-center ${sidebarOpen ? 'justify-between' : 'justify-center'}`}>
             {sidebarOpen && (
               <div className="flex-1">
-                <p className="font-medium text-sm">{user.full_name}</p>
+                <p className="font-medium text-sm">{user?.full_name || 'User'}</p>
                 <p className="text-xs text-slate-400">{user?.role || 'User'}</p>
               </div>
             )}
