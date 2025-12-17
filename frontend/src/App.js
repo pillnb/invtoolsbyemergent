@@ -83,6 +83,16 @@ function App() {
     );
   }
 
+  // If not logged in, show login page
+  if (!user) {
+    return (
+      <div className="App">
+        <Toaster position="top-right" />
+        <LoginPage onLogin={handleLogin} />
+      </div>
+    );
+  }
+
   return (
     <div className="App">
       <Toaster position="top-right" />
