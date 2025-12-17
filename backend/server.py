@@ -421,6 +421,7 @@ async def update_tool(tool_id: str, tool_update: ToolCreate):
         brand_type=update_data['brand_type'],
         serial_no=update_data['serial_no'],
         inventory_code=update_data['inventory_code'],
+        asset_number=update_data.get('asset_number'),
         periodic_inspection_date=update_data.get('periodic_inspection_date'),
         calibration_date=update_data.get('calibration_date'),
         calibration_validity_months=update_data.get('calibration_validity_months', 12),
@@ -428,7 +429,9 @@ async def update_tool(tool_id: str, tool_update: ToolCreate):
         status=status,
         condition=update_data['condition'],
         description=update_data.get('description'),
-        equipment_location=update_data['equipment_location']
+        equipment_location=update_data['equipment_location'],
+        calibration_certificate=existing_tool.get('calibration_certificate'),
+        equipment_manual=existing_tool.get('equipment_manual')
     )
 
 @api_router.delete("/tools/{tool_id}")
