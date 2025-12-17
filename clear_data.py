@@ -3,30 +3,22 @@ import os
 from motor.motor_asyncio import AsyncIOMotorClient
 
 async def clear_data():
-    mongo_url = os.environ.get('MONGO_URL')
-    if not mongo_url:
-        # Try to load from .env
-        with open('/app/backend/.env', 'r') as f:
-            for line in f:
-                if line.startswith('MONGO_URL='):
-                    mongo_url = line.strip().split('=', 1)[1]
-                    break
+    # Load from .env file
+    env_vars = {}
+    with open('/app/backend/.env', 'r') as f:
+        for line in f:
+            if '=' in line and not line.startswith('#'):
+                key, value = line.strip().split('=', 1)
+                # Remove quotes if present
+                value = value.strip('"\'')
+                env_vars[key] = value
+    
+    mongo_url = env_vars.get('MONGO_URL')
+    db_name = env_vars.get('DB_NAME', 'invtools-1-test_database')
     
     if not mongo_url:
         print("ERROR: MONGO_URL not found")
         return
-    
-    # Get DB name from env or use default
-    db_name = os.environ.get('DB_NAME')
-    if not db_name:
-        with open('/app/backend/.env', 'r') as f:
-            for line in f:
-                if line.startswith('DB_NAME='):
-                    db_name = line.strip().split('=', 1)[1]
-                    break
-    
-    if not db_name:
-        db_name = 'invtools-1-test_database'
     
     print(f"Connecting to database: {db_name}")
     client = AsyncIOMotorClient(mongo_url)
