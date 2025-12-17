@@ -6,7 +6,7 @@ const API = `${BACKEND_URL}/api`;
 
 export default function DashboardLayout({ user, onLogout, children, currentPage, onNavigate }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const isAdmin = user.role === 'admin';
+  const isAdmin = user?.role === 'admin';
 
   const menuItems = [
     {
@@ -131,7 +131,7 @@ export default function DashboardLayout({ user, onLogout, children, currentPage,
             {sidebarOpen && (
               <div className="flex-1">
                 <p className="font-medium text-sm">{user.full_name}</p>
-                <p className="text-xs text-slate-400">{user.role}</p>
+                <p className="text-xs text-slate-400">{user?.role || 'User'}</p>
               </div>
             )}
             <Button
