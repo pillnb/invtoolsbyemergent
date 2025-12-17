@@ -16,19 +16,29 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 function App() {
-  // Auto-login: Set default user without authentication
-  const [user, setUser] = useState({
-    id: 'auto-login-user',
-    username: 'admin',
-    role: 'admin',
-    full_name: 'System Administrator'
-  });
-  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState('dashboard');
 
-  // No authentication check needed - auto-login enabled
+  // Check for existing token on mount
   useEffect(() => {
-    // User is automatically logged in, no need to check token
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const response = await axios.get(`${API}/auth/me`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setUser(response.data);
+        } catch (error) {
+          // Token is invalid, clear it
+          localStorage.removeItem('token');
+          setUser(null);
+        }
+      }
+      setLoading(false);
+    };
+    checkAuth();
   }, []);
 
   const handleLogin = (userData, token) => {
