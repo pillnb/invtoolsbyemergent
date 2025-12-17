@@ -326,7 +326,7 @@ async def login(user_login: UserLogin):
     return TokenResponse(access_token=access_token, token_type="bearer", user=user_response)
 
 @api_router.get("/auth/me", response_model=UserResponse)
-async def get_me():
+async def get_me(current_user: dict = Depends(get_current_user)):
     return UserResponse(
         id=current_user["id"],
         username=current_user["username"],
