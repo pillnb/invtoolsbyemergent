@@ -871,7 +871,7 @@ async def export_loan_document(loan_id: str):
 @api_router.get("/loans/{loan_id}/pdf")
 async def get_loan_pdf_legacy(loan_id: str):
     """Legacy endpoint - redirects to export endpoint"""
-    return await export_loan_document(loan_id, current_user)
+    return await export_loan_document(loan_id)
 
 # Calibration endpoints
 @api_router.get("/calibrations", response_model=List[Calibration])
