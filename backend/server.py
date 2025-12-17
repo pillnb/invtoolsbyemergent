@@ -880,7 +880,7 @@ async def get_calibrations():
     return calibrations
 
 @api_router.post("/calibrations", response_model=Calibration)
-async def create_calibration(cal_create: CalibrationCreate):
+async def create_calibration(cal_create: CalibrationCreate, current_user: dict = Depends(get_current_user)):
     calibration = Calibration(**cal_create.model_dump(), created_by=current_user["username"])
     doc = calibration.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
