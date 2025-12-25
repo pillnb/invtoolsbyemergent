@@ -173,7 +173,7 @@ export default function LoansPage({ user }) {
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    {user.role === 'admin' && (
+                    {user?.role === 'admin' && (
                       <>
                         <Button
                           onClick={() => handleEdit(loan)}
