@@ -30,20 +30,24 @@ export default function StockManagementPage({ user }) {
   const [consumeReason, setConsumeReason] = useState('');
   const [consuming, setConsuming] = useState(false);
 
-  const isAdmin = user.role === 'admin';
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     fetchStockItems();
   }, []);
 
   // Get unique item names for filter dropdown
-  const uniqueItemNames = ['All', ...new Set(stockItems.map(item => item.item_name))];
+  const uniqueItemNames = ['All', ...new Set(stockItems.map(item => item.item_name || ''))];
 
   useEffect(() => {
     const filtered = stockItems.filter(item => {
+      const itemName = (item.item_name || '').toLowerCase();
+      const brandSpec = (item.brand_specifications || '').toLowerCase();
+      const searchLower = searchTerm.toLowerCase();
+      
       const matchesSearch = 
-        item.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.brand_specifications.toLowerCase().includes(searchTerm.toLowerCase());
+        itemName.includes(searchLower) ||
+        brandSpec.includes(searchLower);
       
       const matchesItemName = itemNameFilter === 'All' || item.item_name === itemNameFilter;
       
@@ -53,15 +57,19 @@ export default function StockManagementPage({ user }) {
   }, [searchTerm, itemNameFilter, stockItems]);
 
   const fetchStockItems = async () => {
+    setLoading(true);
     try {
       const token = localStorage.getItem('token');
+      console.log('[StockManagement] Fetching stock items...');
       const response = await axios.get(`${API}/stock`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setStockItems(response.data);
-      setFilteredItems(response.data);
+      console.log('[StockManagement] Fetched', response.data.length, 'items');
+      setStockItems(response.data || []);
+      setFilteredItems(response.data || []);
     } catch (error) {
-      toast.error('Failed to fetch stock items');
+      console.error('[StockManagement] Fetch error:', error.response?.data || error.message);
+      toast.error(error.response?.data?.detail || 'Failed to fetch stock items');
     } finally {
       setLoading(false);
     }
