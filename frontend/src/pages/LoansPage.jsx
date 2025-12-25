@@ -27,26 +27,35 @@ export default function LoansPage({ user }) {
   useEffect(() => {
     const filtered = loans.filter(loan => {
       const searchLower = searchTerm.toLowerCase();
+      const borrowerName = (loan.borrower_name || '').toLowerCase();
+      const projectName = (loan.project_name || '').toLowerCase();
+      const wbsNo = (loan.wbs_project_no || '').toLowerCase();
+      const equipments = loan.equipments || [];
+      
       return (
-        loan.borrower_name.toLowerCase().includes(searchLower) ||
-        loan.project_name.toLowerCase().includes(searchLower) ||
-        loan.wbs_project_no.toLowerCase().includes(searchLower) ||
-        loan.equipments.some(eq => eq.equipment_name.toLowerCase().includes(searchLower))
+        borrowerName.includes(searchLower) ||
+        projectName.includes(searchLower) ||
+        wbsNo.includes(searchLower) ||
+        equipments.some(eq => (eq.equipment_name || '').toLowerCase().includes(searchLower))
       );
     });
     setFilteredLoans(filtered);
   }, [searchTerm, loans]);
 
   const fetchLoans = async () => {
+    setLoading(true);
     try {
       const token = localStorage.getItem('token');
+      console.log('[LoansPage] Fetching loan records...');
       const response = await axios.get(`${API}/loans`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setLoans(response.data);
-      setFilteredLoans(response.data);
+      console.log('[LoansPage] Fetched', response.data.length, 'loan records');
+      setLoans(response.data || []);
+      setFilteredLoans(response.data || []);
     } catch (error) {
-      toast.error('Failed to fetch loan records');
+      console.error('[LoansPage] Fetch error:', error.response?.data || error.message);
+      toast.error(error.response?.data?.detail || 'Failed to fetch loan records');
     } finally {
       setLoading(false);
     }
@@ -55,14 +64,17 @@ export default function LoansPage({ user }) {
   const fetchTools = async () => {
     try {
       const token = localStorage.getItem('token');
+      console.log('[LoansPage] Fetching tools for loan form...');
       const response = await axios.get(`${API}/tools`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setTools(response.data);
+      console.log('[LoansPage] Fetched', response.data.length, 'tools');
+      setTools(response.data || []);
     } catch (error) {
-      console.error('Failed to fetch tools:', error);
+      console.error('[LoansPage] Failed to fetch tools:', error.response?.data || error.message);
     }
   };
+
 
   const handleEdit = (loan) => {
     setSelectedLoan(loan);
